@@ -1,123 +1,128 @@
 package isup
 
 import (
+	"encoding/binary"
 	"fmt"
-	"strings"
 )
 
-// MessageType represents the ISUP message type.
-type MessageType byte
+// ISUP Common Header
+type ISUPHeader struct {
+	MessageType uint8 `json:"message_type"`
+}
 
-// MessageType constants
+// ISUP Message
+type ISUPMessage struct {
+	Header ISUPHeader `json:"header"`
+	CIC    uint16     `json:"cic"`
+	Data   []byte     `json:"data"`
+}
+
+// ParseISUP parses an ISUP message from bytes
+func ParseISUP(data []byte) (*ISUPMessage, error) {
+	if len(data) < 3 {
+		return nil, fmt.Errorf("ISUP message too short (%d bytes)", len(data))
+	}
+
+	// CIC (Circuit Identification Code) - 2 bytes
+	cic := binary.BigEndian.Uint16(data[0:2])
+
+	// Message type - 1 byte
+	msg := &ISUPMessage{
+		CIC: cic,
+		Header: ISUPHeader{
+			MessageType: data[2],
+		},
+	}
+
+	if len(data) > 3 {
+		msg.Data = data[3:]
+	}
+
+	return msg, nil
+}
+
+// ISUP message type constants
 const (
-	MsgIAM MessageType = 0x01
-	MsgACM MessageType = 0x06
-	MsgANM MessageType = 0x09
-	MsgREL MessageType = 0x0C
+	ISUPMessageTypeIAM   = 1  // Initial Address Message
+	ISUPMessageTypeSAM   = 2  // Subsequent Address Message
+	ISUPMessageTypeINR   = 3  // Information Request
+	ISUPMessageTypeINF   = 4  // Information
+	ISUPMessageTypeCOT   = 5  // Continuity
+	ISUPMessageTypeACM   = 6  // Address Complete Message
+	ISUPMessageTypeCON   = 7  // Connect
+	ISUPMessageTypeFOT   = 8  // Forward Transfer
+	ISUPMessageTypeANM   = 9  // Answer Message
+	ISUPMessageTypeREL   = 12 // Release
+	ISUPMessageTypeSUS   = 13 // Suspend
+	ISUPMessageTypeRES   = 14 // Resume
+	ISUPMessageTypeRLC   = 16 // Release Complete
+	ISUPMessageTypeCCR   = 17 // Continuity Check Request
+	ISUPMessageTypeRSC   = 18 // Reset Circuit
+	ISUPMessageTypeBLO   = 19 // Blocking
+	ISUPMessageTypeUBL   = 20 // Unblocking
+	ISUPMessageTypeBLA   = 21 // Blocking Acknowledgment
+	ISUPMessageTypeUBA   = 22 // Unblocking Acknowledgment
+	ISUPMessageTypeGRS   = 23 // Circuit Group Reset
+	ISUPMessageTypeCGB   = 24 // Circuit Group Blocking
+	ISUPMessageTypeCGU   = 25 // Circuit Group Unblocking
+	ISUPMessageTypeCGBA  = 26 // Circuit Group Blocking Acknowledgment
+	ISUPMessageTypeCGUA  = 27 // Circuit Group Unblocking Acknowledgment
+	ISUPMessageTypeCMR   = 28 // Call Modification Request
+	ISUPMessageTypeCMC   = 29 // Call Modification Completed
+	ISUPMessageTypeCMRJ  = 30 // Call Modification Reject
+	ISUPMessageTypeFAR   = 31 // Facility Request
+	ISUPMessageTypeFAA   = 32 // Facility Accepted
+	ISUPMessageTypeFRJ   = 33 // Facility Reject
+	ISUPMessageTypeFAD   = 34 // Facility Deactivated
+	ISUPMessageTypeFAI   = 35 // Facility Information
+	ISUPMessageTypeLPA   = 36 // Loopback Acknowledgment
+	ISUPMessageTypeCSVQ  = 37 // CUG Selection and Validation Request
+	ISUPMessageTypeCSVR  = 38 // CUG Selection and Validation Response
 )
 
-// IAMFixedPart holds the mandatory fixed part fields.
-type IAMFixedPart struct {
-	NatureOfConnection    byte   // 1 byte
-	ForwardCallIndicators uint16 // 2 bytes
-	CallingPartyCategory  byte   // 1 byte
-	TransmissionMediumReq byte   // 1 byte
+// ISUP message type to string mapping
+var ISUPMessageTypeNames = map[uint8]string{
+	ISUPMessageTypeIAM:  "IAM (Initial Address Message)",
+	ISUPMessageTypeSAM:  "SAM (Subsequent Address Message)",
+	ISUPMessageTypeINR:  "INR (Information Request)",
+	ISUPMessageTypeINF:  "INF (Information)",
+	ISUPMessageTypeCOT:  "COT (Continuity)",
+	ISUPMessageTypeACM:  "ACM (Address Complete Message)",
+	ISUPMessageTypeCON:  "CON (Connect)",
+	ISUPMessageTypeFOT:  "FOT (Forward Transfer)",
+	ISUPMessageTypeANM:  "ANM (Answer Message)",
+	ISUPMessageTypeREL:  "REL (Release)",
+	ISUPMessageTypeSUS:  "SUS (Suspend)",
+	ISUPMessageTypeRES:  "RES (Resume)",
+	ISUPMessageTypeRLC:  "RLC (Release Complete)",
+	ISUPMessageTypeCCR:  "CCR (Continuity Check Request)",
+	ISUPMessageTypeRSC:  "RSC (Reset Circuit)",
+	ISUPMessageTypeBLO:  "BLO (Blocking)",
+	ISUPMessageTypeUBL:  "UBL (Unblocking)",
+	ISUPMessageTypeBLA:  "BLA (Blocking Acknowledgment)",
+	ISUPMessageTypeUBA:  "UBA (Unblocking Acknowledgment)",
+	ISUPMessageTypeGRS:  "GRS (Circuit Group Reset)",
+	ISUPMessageTypeCGB:  "CGB (Circuit Group Blocking)",
+	ISUPMessageTypeCGU:  "CGU (Circuit Group Unblocking)",
+	ISUPMessageTypeCGBA: "CGBA (Circuit Group Blocking Acknowledgment)",
+	ISUPMessageTypeCGUA: "CGUA (Circuit Group Unblocking Acknowledgment)",
+	ISUPMessageTypeCMR:  "CMR (Call Modification Request)",
+	ISUPMessageTypeCMC:  "CMC (Call Modification Completed)",
+	ISUPMessageTypeCMRJ: "CMRJ (Call Modification Reject)",
+	ISUPMessageTypeFAR:  "FAR (Facility Request)",
+	ISUPMessageTypeFAA:  "FAA (Facility Accepted)",
+	ISUPMessageTypeFRJ:  "FRJ (Facility Reject)",
+	ISUPMessageTypeFAD:  "FAD (Facility Deactivated)",
+	ISUPMessageTypeFAI:  "FAI (Facility Information)",
+	ISUPMessageTypeLPA:  "LPA (Loopback Acknowledgment)",
+	ISUPMessageTypeCSVQ: "CSVQ (CUG Selection and Validation Request)",
+	ISUPMessageTypeCSVR: "CSVR (CUG Selection and Validation Response)",
 }
 
-// Parameter represents an ISUP parameter (code, length, value).
-type Parameter struct {
-	Code   byte
-	Length int
-	Value  []byte
-}
-
-// IAMMessage represents a parsed IAM.
-type IAMMessage struct {
-	Fixed        IAMFixedPart
-	CalledParty  string
-	CallingParty string
-	RawParams    []Parameter
-}
-
-// ParseIAM parses an Initial Address Message.
-func ParseIAM(b []byte) (*IAMMessage, error) {
-	if len(b) < 6 { // 1 (msg type) + 5 (fixed part)
-		return nil, fmt.Errorf("IAM too short (%d bytes)", len(b))
+// GetISUPMessageTypeName returns the human-readable name for an ISUP message type
+func GetISUPMessageTypeName(messageType uint8) string {
+	if name, exists := ISUPMessageTypeNames[messageType]; exists {
+		return name
 	}
-	if MessageType(b[0]) != MsgIAM {
-		return nil, fmt.Errorf("not an IAM (got type 0x%02x)", b[0])
-	}
-	i := 1
-	iam := &IAMMessage{}
-	iam.Fixed = IAMFixedPart{
-		NatureOfConnection:    b[i],
-		ForwardCallIndicators: uint16(b[i+1]) | uint16(b[i+2])<<8,
-		CallingPartyCategory:  b[i+3],
-		TransmissionMediumReq: b[i+4],
-	}
-	i += 5
-
-	// --- Called party number (mandatory variable) ---
-	if i >= len(b) {
-		return iam, nil // no called party present
-	}
-	calledLen := int(b[i])
-	i++
-	if i+calledLen > len(b) {
-		return nil, fmt.Errorf("called party length %d exceeds remaining %d bytes", calledLen, len(b)-i)
-	}
-	calledDigits := decodeBCD(b[i : i+calledLen])
-	iam.CalledParty = calledDigits
-	i += calledLen
-
-	// --- Optional params (simplified TLV) ---
-	for i < len(b) {
-		if i+2 > len(b) {
-			return nil, fmt.Errorf("parameter header too short at %d", i)
-		}
-		code := b[i]
-		length := int(b[i+1])
-		i += 2
-		if i+length > len(b) {
-			return nil, fmt.Errorf("parameter length %d exceeds remaining %d bytes", length, len(b)-i)
-		}
-		val := make([]byte, length)
-		copy(val, b[i:i+length])
-		i += length
-		p := Parameter{Code: code, Length: length, Value: val}
-		iam.RawParams = append(iam.RawParams, p)
-
-		// Example: code 0x0A = Calling Party Number
-		if code == 0x0A {
-			iam.CallingParty = decodeBCD(val[1:]) // skip first octet (nature/plan)
-		}
-	}
-	return iam, nil
-}
-
-// decodeBCD decodes semi-octet BCD digits (used in ISUP numbers).
-func decodeBCD(b []byte) string {
-	var sb strings.Builder
-	for _, octet := range b {
-		lo := octet & 0x0F
-		hi := (octet & 0xF0) >> 4
-		if lo <= 9 {
-			sb.WriteByte('0' + lo)
-		} else if lo == 0x0F {
-			break
-		}
-		if hi <= 9 {
-			sb.WriteByte('0' + hi)
-		}
-	}
-	return sb.String()
-}
-
-// Debug print helper
-func (iam *IAMMessage) String() string {
-	return fmt.Sprintf("IAM{Called:%s, Calling:%s, Cat:0x%02x, FwdInd:0x%04x, RawParams:%d}",
-		iam.CalledParty, iam.CallingParty,
-		iam.Fixed.CallingPartyCategory,
-		iam.Fixed.ForwardCallIndicators,
-		len(iam.RawParams))
+	return fmt.Sprintf("Unknown (0x%02X)", messageType)
 }
