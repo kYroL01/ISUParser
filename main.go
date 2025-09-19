@@ -32,12 +32,12 @@ type M2PAHeader struct {
 
 // M2PA User Data Message
 type M2PAUserData struct {
-	Header    M2PAHeader `json:"header"`
-	Reserved1 uint16     `json:"reserved1"`
-	BSN       uint32     `json:"bsn"` // Backward Sequence Number
-	Reserved2 uint16     `json:"reserved2"`
-	FSN       uint32     `json:"fsn"`  // Forward Sequence Number
-	Data      []byte     `json:"data"` // Contains MTP3 + ISUP message
+	Header   M2PAHeader `json:"header"`
+	Ununsed1 uint8      `json:"unused1"`
+	BSN      uint32     `json:"bsn"` // Backward Sequence Number
+	Ununsed2 uint8      `json:"unused2"`
+	FSN      uint32     `json:"fsn"`  // Forward Sequence Number
+	Data     []byte     `json:"data"` // Contains MTP3 + ISUP message
 }
 
 // M3UA Common Header
@@ -100,11 +100,15 @@ type ParsedMessage struct {
 	Error           string            `json:"error,omitempty"`
 }
 
-// Parse M2PA message from bytes
+// Parse M2PA message from bytes with correct field sizes
 func parseM2PA(data []byte) (*M2PAUserData, error) {
-	if len(data) < 20 {
+	fmt.Printf("M2PA data length: %d bytes\n", len(data))
+	if len(data) < 8 {
 		return nil, fmt.Errorf("M2PA message too short (%d bytes)", len(data))
 	}
+
+	// Print first few bytes for debugging
+	fmt.Printf("M2PA header bytes: %v\n", data[:min(20, len(data))])
 
 	header := M2PAHeader{
 		Version:       data[0],
@@ -114,19 +118,63 @@ func parseM2PA(data []byte) (*M2PAUserData, error) {
 		MessageLength: binary.BigEndian.Uint32(data[4:8]),
 	}
 
+	fmt.Printf("M2PA Header: Version=%d, Class=%d, Type=%d, Length=%d\n",
+		header.Version, header.MessageClass, header.MessageType, header.MessageLength)
+
 	msg := &M2PAUserData{
-		Header:    header,
-		Reserved1: binary.BigEndian.Uint16(data[8:10]),
-		BSN:       binary.BigEndian.Uint32(data[10:14]),
-		Reserved2: binary.BigEndian.Uint16(data[14:16]),
-		FSN:       binary.BigEndian.Uint32(data[16:20]),
+		Header: header,
 	}
 
-	if len(data) > 20 {
-		msg.Data = data[20:]
+	offset := 8
+
+	// Parse Unused1 (1 byte)
+	if offset < len(data) {
+		msg.Ununsed1 = data[offset]
+		fmt.Printf("Unused1: %d (0x%02X)\n", msg.Ununsed1, msg.Ununsed1)
+		offset += 1
+	}
+
+	// Parse BSN (3 bytes)
+	if offset+3 <= len(data) {
+		bsnBytes := make([]byte, 4)
+		copy(bsnBytes[1:], data[offset:offset+3]) // Pad with 0 at beginning
+		msg.BSN = binary.BigEndian.Uint32(bsnBytes)
+		fmt.Printf("BSN (3 bytes): %d (bytes: %v)\n", msg.BSN, data[offset:offset+3])
+		offset += 3
+	}
+
+	// Parse Unused2 (1 byte)
+	if offset < len(data) {
+		msg.Ununsed2 = data[offset]
+		fmt.Printf("Unused2: %d (0x%02X)\n", msg.Ununsed2, msg.Ununsed2)
+		offset += 1
+	}
+
+	// Parse FSN (3 bytes)
+	if offset+3 <= len(data) {
+		fsnBytes := make([]byte, 4)
+		copy(fsnBytes[1:], data[offset:offset+3]) // Pad with 0 at beginning
+		msg.FSN = binary.BigEndian.Uint32(fsnBytes)
+		fmt.Printf("FSN (3 bytes): %d (bytes: %v)\n", msg.FSN, data[offset:offset+3])
+		offset += 3
+	}
+
+	// Remaining data contains MTP3 + ISUP
+	if offset < len(data) {
+		msg.Data = data[offset:]
+		fmt.Printf("M2PA payload: %d bytes (starts with: %v)\n", len(msg.Data), msg.Data[:min(10, len(msg.Data))])
+	} else {
+		fmt.Println("No M2PA payload data")
 	}
 
 	return msg, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Parse M3UA message from bytes
@@ -210,15 +258,17 @@ func parseMTP3(data []byte) (*MTP3Message, error) {
 func parseSCTPChunks(sctpPayload []byte) ([]byte, uint32, uint32, error) {
 	offset := 0
 	for offset < len(sctpPayload) {
+
 		if offset+4 > len(sctpPayload) {
+			fmt.Println("Incomplete chunk header, stopping parse")
 			break
 		}
 
-		chunkType := sctpPayload[offset]
+		chunkType := uint16(sctpPayload[offset])
 		chunkFlags := sctpPayload[offset+1]
-		chunkLength := binary.BigEndian.Uint16(sctpPayload[offset+2 : offset+4])
+		chunkLength := uint32(binary.BigEndian.Uint16(sctpPayload[offset+2 : offset+4]))
 
-		fmt.Println("Chunk Type:", chunkType, "Flags:", chunkFlags, "Length:", chunkLength)
+		fmt.Printf("Chunk Type: %d, Flags: %x, Length: %d\n", chunkType, chunkFlags, chunkLength)
 
 		if chunkLength < 4 {
 			break
@@ -232,7 +282,7 @@ func parseSCTPChunks(sctpPayload []byte) ([]byte, uint32, uint32, error) {
 			tsn := binary.BigEndian.Uint32(sctpPayload[offset+4 : offset+8])
 			ppid := binary.BigEndian.Uint32(sctpPayload[offset+12 : offset+16])
 
-			fmt.Println("DATA Chunk found - TSN:", tsn, "PPID:", ppid)
+			fmt.Println("DATA Chunk found --> TSN:", tsn, "PPID:", ppid)
 
 			// Extract user data
 			dataStart := offset + 16
@@ -266,37 +316,40 @@ func extractSCTPPayload(packet gopacket.Packet) ([]byte, uint32, uint32, error) 
 		return nil, 0, 0, fmt.Errorf("not SCTP packet")
 	}
 
-	// Get application layer (SCTP payload)
-	appLayer := packet.ApplicationLayer()
-	if appLayer == nil {
-		return nil, 0, 0, fmt.Errorf("no application layer data")
+	// Check the header length
+	sctpHeader := sctpLayer.LayerContents()
+	if len(sctpHeader) < 12 {
+		return nil, 0, 0, fmt.Errorf("SCTP header too short (%d bytes)", len(sctpHeader))
 	}
 
-	// Parse SCTP chunks to get PPID and TSN
-	payload := appLayer.Payload()
-	return parseSCTPChunks(payload)
+	sctpPayload := sctpLayer.LayerPayload()
+
+	// parse SCTP chunks
+	userData, ppid, tsn, err := parseSCTPChunks(sctpPayload)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	return userData, ppid, tsn, nil
 }
 
 // Detect protocol based on PPID and payload content
 func detectProtocol(ppid uint32, payload []byte) string {
-	switch ppid {
-	case 5: // M2PA PPID
-		return ProtocolM2PA
-	case 3: // M3UA PPID
-		return ProtocolM3UA
+
+	if len(payload) < 4 {
+		return ProtocolUnknown
 	}
 
-	fmt.Println("checking payload for protocol detection...")
-
-	// Fallback: check payload content
-	if len(payload) >= 4 {
+	switch ppid {
+	case 5: // M2PA PPID
+		// M2PA: version = 1, message class often = 11 (Transfer) or 1 (Management)
+		if payload[0] == 1 && payload[1] == 0 && (payload[2] == 11 || payload[2] == 1) {
+			return ProtocolM2PA
+		}
+	case 3: // M3UA PPID
 		// M3UA: version = 1, reserved = 0
 		if payload[0] == 1 && payload[1] == 0 {
 			return ProtocolM3UA
-		}
-		// M2PA: version = 1, message class often = 11 (Transfer) or 1 (Management)
-		if payload[0] == 1 && (payload[2] == 11 || payload[2] == 1) {
-			return ProtocolM2PA
 		}
 	}
 
@@ -354,7 +407,6 @@ func main() {
 		}
 
 		// Extract SCTP payload
-		fmt.Println("Calling extractSCTPPayload...")
 		payload, ppid, tsn, err := extractSCTPPayload(packet)
 		if err != nil {
 			// Skip non-SCTP or malformed SCTP packets
@@ -362,7 +414,6 @@ func main() {
 		}
 
 		// Detect protocol
-		fmt.Println("Calling detectProtocol...")
 		protocol := detectProtocol(ppid, payload)
 		if protocol == ProtocolUnknown {
 			continue
