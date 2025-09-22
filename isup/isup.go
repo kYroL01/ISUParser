@@ -1,7 +1,6 @@
 package isup
 
 import (
-	"encoding/binary"
 	"fmt"
 )
 
@@ -25,10 +24,29 @@ func ParseISUP(data []byte) (*ISUPMessage, error) {
 
 	fmt.Println("ISUP raw data:", data)
 
-	// CIC (Circuit Identification Code) - 2 bytes
-	cic := binary.BigEndian.Uint16(data[0:2])
+	isITUFormat := true   // Assume not ITU-T by default
+	isANSIFormat := false // Assume ANSI by default
+	var cic uint16
 
-	fmt.Println("Parsing CIC:", cic)
+	if isITUFormat {
+		fmt.Println("ITU-T ISUP parsing")
+		// For ITU-T ISUP (12-bit CIC)
+		cicLow := data[0]         // CIC Low-Order Octet
+		cicHigh := data[1] & 0x0F // CIC High-Order 4 bits (lower 4 bits of byte)
+		cic = (uint16(cicHigh) << 8) | uint16(cicLow)
+
+	} else if isANSIFormat {
+		fmt.Println("ANSI ISUP parsing")
+		// For ANSI ISUP (14-bit CIC)
+		cicLow := data[0]         // CIC Low-Order Octet
+		cicHigh := data[1] & 0x3F // CIC High-Order 6 bits (lower 6 bits of byte)
+		cic = (uint16(cicHigh) << 8) | uint16(cicLow)
+
+	} else {
+		return nil, fmt.Errorf("unknown ISUP format")
+	}
+
+	fmt.Println("ISUP CIC:", cic)
 
 	// Message type - 1 byte
 	msg := &ISUPMessage{
@@ -37,6 +55,8 @@ func ParseISUP(data []byte) (*ISUPMessage, error) {
 			MessageType: data[2],
 		},
 	}
+
+	fmt.Println("ISUP Message Type:", msg.Header.MessageType, "(", GetISUPMessageTypeName(msg.Header.MessageType), ")")
 
 	if len(data) > 3 {
 		msg.Data = data[3:]
