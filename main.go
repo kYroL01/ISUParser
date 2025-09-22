@@ -36,7 +36,8 @@ type M2PAUserData struct {
 	Ununsed1 uint8      `json:"unused1"`
 	BSN      uint32     `json:"bsn"` // Backward Sequence Number
 	Ununsed2 uint8      `json:"unused2"`
-	FSN      uint32     `json:"fsn"`  // Forward Sequence Number
+	FSN      uint32     `json:"fsn"` // Forward Sequence Number
+	Priority uint8      `json:"priority"`
 	Data     []byte     `json:"data"` // Contains MTP3 + ISUP message
 }
 
@@ -102,6 +103,7 @@ type ParsedMessage struct {
 
 // Parse M2PA message from bytes with correct field sizes
 func parseM2PA(data []byte) (*M2PAUserData, error) {
+
 	fmt.Printf("M2PA data length: %d bytes\n", len(data))
 	if len(data) < 8 {
 		return nil, fmt.Errorf("M2PA message too short (%d bytes)", len(data))
@@ -139,7 +141,7 @@ func parseM2PA(data []byte) (*M2PAUserData, error) {
 		bsnBytes := make([]byte, 4)
 		copy(bsnBytes[1:], data[offset:offset+3]) // Pad with 0 at beginning
 		msg.BSN = binary.BigEndian.Uint32(bsnBytes)
-		fmt.Printf("BSN (3 bytes): %d (bytes: %v)\n", msg.BSN, data[offset:offset+3])
+		fmt.Printf("BSN (3 bytes): %d (Hex: %x)\n", msg.BSN, data[offset:offset+3])
 		offset += 3
 	}
 
@@ -155,14 +157,21 @@ func parseM2PA(data []byte) (*M2PAUserData, error) {
 		fsnBytes := make([]byte, 4)
 		copy(fsnBytes[1:], data[offset:offset+3]) // Pad with 0 at beginning
 		msg.FSN = binary.BigEndian.Uint32(fsnBytes)
-		fmt.Printf("FSN (3 bytes): %d (bytes: %v)\n", msg.FSN, data[offset:offset+3])
+		fmt.Printf("FSN (3 bytes): %d (Hex: %x)\n", msg.FSN, data[offset:offset+3])
 		offset += 3
+	}
+
+	// Parse Priority (1 byte)
+	if offset < len(data) {
+		msg.Priority = data[offset]
+		fmt.Printf("Priority: %d (0x%02X)\n", msg.Priority, msg.Priority)
+		offset += 1
 	}
 
 	// Remaining data contains MTP3 + ISUP
 	if offset < len(data) {
 		msg.Data = data[offset:]
-		fmt.Printf("M2PA payload: %d bytes (starts with: %v)\n", len(msg.Data), msg.Data[:min(10, len(msg.Data))])
+		fmt.Printf("M2PA payload: %d bytes (starts with: %x)\n", len(msg.Data), msg.Data[:min(10, len(msg.Data))])
 	} else {
 		fmt.Println("No M2PA payload data")
 	}
@@ -217,10 +226,13 @@ func parseM3UA(data []byte) (*M3UAMessage, error) {
 }
 
 // Parse MTP3 message from bytes
+// Enhanced debug version of MTP3 parsing
 func parseMTP3(data []byte) (*MTP3Message, error) {
 	if len(data) < 5 {
 		return nil, fmt.Errorf("MTP3 message too short (%d bytes)", len(data))
 	}
+
+	fmt.Printf("MTP3 raw data (%d bytes): %v\n", len(data), data[:min(10, len(data))])
 
 	// Service Information Octet
 	sio := data[0]
@@ -229,26 +241,44 @@ func parseMTP3(data []byte) (*MTP3Message, error) {
 		ServiceIndicator: sio & 0x0F,
 	}
 
-	// Routing Label (4 bytes)
-	// DPC: bits 14-1 of bytes 1-2
-	dpc := (uint32(data[1]) << 8) | uint32(data[2])
-	dpc &= 0x3FFF // Keep only 14 bits
+	fmt.Printf("SIO: 0x%02X (binary: %08b)\n", sio, sio)
+	fmt.Printf("  Network Indicator: bits %02b = %d\n", (sio>>6)&0x03, mtp3.NetworkIndicator)
+	fmt.Printf("  Spare: bits %02b = %d\n", (sio>>4)&0x03, (sio>>4)&0x03)
+	fmt.Printf("  Service Indicator: bits %04b = %d\n", sio&0x0F, mtp3.ServiceIndicator)
 
-	// OPC: bits 14-1 of bytes 3-4
-	opc := (uint32(data[2]) << 14) | (uint32(data[3]) << 6) | (uint32(data[4]) >> 2)
-	opc &= 0x3FFF // Keep only 14 bits
+	// Routing Label parsing
+	if len(data) >= 5 {
+		// Debug the routing label bytes
+		fmt.Printf("Routing label bytes: %v (hex: %02X %02X %02X %02X)\n",
+			data[1:5], data[1], data[2], data[3], data[4])
 
-	// SLS: last 4 bits of byte 4
-	sls := data[4] & 0x0F
+		// DPC calculation
+		dpc16 := uint16(data[1])<<8 | uint16(data[2])
+		dpc := uint32(dpc16) & 0x3FFF
+		fmt.Printf("  DPC raw: 0x%04X, masked: 0x%04X (%d)\n", dpc16, dpc, dpc)
 
-	mtp3.RoutingLabel = MTP3RoutingLabel{
-		DPC:                   dpc,
-		OPC:                   opc,
-		SignalingLinkSelector: sls,
+		// OPC calculation
+		opcPart1 := uint32(data[2]) & 0x03 // Lower 2 bits of byte 3
+		opcPart2 := uint32(data[3])        // Whole byte 2
+		opcPart3 := uint32(data[4]) >> 6   // Upper 3 bits of byte 5
+		opc := (opcPart1 << 12) | (opcPart2 << 4) | opcPart3
+		fmt.Printf("  OPC parts: %02b %08b %02b = %d\n", opcPart1, opcPart2, opcPart3, opc)
+
+		// SLS calculation
+		sls := data[4] & 0x0F
+		fmt.Printf("  SLS: %04b = %d\n", sls, sls)
+
+		mtp3.RoutingLabel = MTP3RoutingLabel{
+			DPC:                   dpc,
+			OPC:                   opc,
+			SignalingLinkSelector: sls,
+		}
 	}
 
+	// ISUP payload
 	if len(data) > 5 {
-		mtp3.Data = data[5:]
+		mtp3.Data = data[6:]
+		fmt.Printf("ISUP payload: %d bytes\n", len(mtp3.Data))
 	}
 
 	return mtp3, nil
@@ -325,6 +355,7 @@ func extractSCTPPayload(packet gopacket.Packet) ([]byte, uint32, uint32, error) 
 	sctpPayload := sctpLayer.LayerPayload()
 
 	// parse SCTP chunks
+	fmt.Println("\n\tParsing SCTP of new packet...")
 	userData, ppid, tsn, err := parseSCTPChunks(sctpPayload)
 	if err != nil {
 		return nil, 0, 0, err
@@ -512,7 +543,7 @@ func main() {
 		successfulParses, filename)
 
 	// Print summary
-	fmt.Printf("\nFirst few messages:\n")
+	fmt.Printf("\nSummary:\n")
 	for i, msg := range allMessages {
 		if i >= 5 {
 			break
