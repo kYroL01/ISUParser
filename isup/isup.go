@@ -23,8 +23,12 @@ func ParseISUP(data []byte) (*ISUPMessage, error) {
 		return nil, fmt.Errorf("ISUP message too short (%d bytes)", len(data))
 	}
 
+	fmt.Println("ISUP raw data:", data)
+
 	// CIC (Circuit Identification Code) - 2 bytes
 	cic := binary.BigEndian.Uint16(data[0:2])
+
+	fmt.Println("Parsing CIC:", cic)
 
 	// Message type - 1 byte
 	msg := &ISUPMessage{
@@ -43,41 +47,41 @@ func ParseISUP(data []byte) (*ISUPMessage, error) {
 
 // ISUP message type constants
 const (
-	ISUPMessageTypeIAM   = 1  // Initial Address Message
-	ISUPMessageTypeSAM   = 2  // Subsequent Address Message
-	ISUPMessageTypeINR   = 3  // Information Request
-	ISUPMessageTypeINF   = 4  // Information
-	ISUPMessageTypeCOT   = 5  // Continuity
-	ISUPMessageTypeACM   = 6  // Address Complete Message
-	ISUPMessageTypeCON   = 7  // Connect
-	ISUPMessageTypeFOT   = 8  // Forward Transfer
-	ISUPMessageTypeANM   = 9  // Answer Message
-	ISUPMessageTypeREL   = 12 // Release
-	ISUPMessageTypeSUS   = 13 // Suspend
-	ISUPMessageTypeRES   = 14 // Resume
-	ISUPMessageTypeRLC   = 16 // Release Complete
-	ISUPMessageTypeCCR   = 17 // Continuity Check Request
-	ISUPMessageTypeRSC   = 18 // Reset Circuit
-	ISUPMessageTypeBLO   = 19 // Blocking
-	ISUPMessageTypeUBL   = 20 // Unblocking
-	ISUPMessageTypeBLA   = 21 // Blocking Acknowledgment
-	ISUPMessageTypeUBA   = 22 // Unblocking Acknowledgment
-	ISUPMessageTypeGRS   = 23 // Circuit Group Reset
-	ISUPMessageTypeCGB   = 24 // Circuit Group Blocking
-	ISUPMessageTypeCGU   = 25 // Circuit Group Unblocking
-	ISUPMessageTypeCGBA  = 26 // Circuit Group Blocking Acknowledgment
-	ISUPMessageTypeCGUA  = 27 // Circuit Group Unblocking Acknowledgment
-	ISUPMessageTypeCMR   = 28 // Call Modification Request
-	ISUPMessageTypeCMC   = 29 // Call Modification Completed
-	ISUPMessageTypeCMRJ  = 30 // Call Modification Reject
-	ISUPMessageTypeFAR   = 31 // Facility Request
-	ISUPMessageTypeFAA   = 32 // Facility Accepted
-	ISUPMessageTypeFRJ   = 33 // Facility Reject
-	ISUPMessageTypeFAD   = 34 // Facility Deactivated
-	ISUPMessageTypeFAI   = 35 // Facility Information
-	ISUPMessageTypeLPA   = 36 // Loopback Acknowledgment
-	ISUPMessageTypeCSVQ  = 37 // CUG Selection and Validation Request
-	ISUPMessageTypeCSVR  = 38 // CUG Selection and Validation Response
+	ISUPMessageTypeIAM  = 1  // Initial Address Message
+	ISUPMessageTypeSAM  = 2  // Subsequent Address Message
+	ISUPMessageTypeINR  = 3  // Information Request
+	ISUPMessageTypeINF  = 4  // Information
+	ISUPMessageTypeCOT  = 5  // Continuity
+	ISUPMessageTypeACM  = 6  // Address Complete Message
+	ISUPMessageTypeCON  = 7  // Connect
+	ISUPMessageTypeFOT  = 8  // Forward Transfer
+	ISUPMessageTypeANM  = 9  // Answer Message
+	ISUPMessageTypeREL  = 12 // Release
+	ISUPMessageTypeSUS  = 13 // Suspend
+	ISUPMessageTypeRES  = 14 // Resume
+	ISUPMessageTypeRLC  = 16 // Release Complete
+	ISUPMessageTypeCCR  = 17 // Continuity Check Request
+	ISUPMessageTypeRSC  = 18 // Reset Circuit
+	ISUPMessageTypeBLO  = 19 // Blocking
+	ISUPMessageTypeUBL  = 20 // Unblocking
+	ISUPMessageTypeBLA  = 21 // Blocking Acknowledgment
+	ISUPMessageTypeUBA  = 22 // Unblocking Acknowledgment
+	ISUPMessageTypeGRS  = 23 // Circuit Group Reset
+	ISUPMessageTypeCGB  = 24 // Circuit Group Blocking
+	ISUPMessageTypeCGU  = 25 // Circuit Group Unblocking
+	ISUPMessageTypeCGBA = 26 // Circuit Group Blocking Acknowledgment
+	ISUPMessageTypeCGUA = 27 // Circuit Group Unblocking Acknowledgment
+	ISUPMessageTypeCMR  = 28 // Call Modification Request
+	ISUPMessageTypeCMC  = 29 // Call Modification Completed
+	ISUPMessageTypeCMRJ = 30 // Call Modification Reject
+	ISUPMessageTypeFAR  = 31 // Facility Request
+	ISUPMessageTypeFAA  = 32 // Facility Accepted
+	ISUPMessageTypeFRJ  = 33 // Facility Reject
+	ISUPMessageTypeFAD  = 34 // Facility Deactivated
+	ISUPMessageTypeFAI  = 35 // Facility Information
+	ISUPMessageTypeLPA  = 36 // Loopback Acknowledgment
+	ISUPMessageTypeCSVQ = 37 // CUG Selection and Validation Request
+	ISUPMessageTypeCSVR = 38 // CUG Selection and Validation Response
 )
 
 // ISUP message type to string mapping

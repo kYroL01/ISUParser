@@ -246,27 +246,24 @@ func parseMTP3(data []byte) (*MTP3Message, error) {
 	fmt.Printf("  Spare: bits %02b = %d\n", (sio>>4)&0x03, (sio>>4)&0x03)
 	fmt.Printf("  Service Indicator: bits %04b = %d\n", sio&0x0F, mtp3.ServiceIndicator)
 
-	// Routing Label parsing
+	// Routing Label parsing - Extract fields according to MTP3 specification
 	if len(data) >= 5 {
-		// Debug the routing label bytes
-		fmt.Printf("Routing label bytes: %v (hex: %02X %02X %02X %02X)\n",
-			data[1:5], data[1], data[2], data[3], data[4])
 
-		// DPC calculation
-		dpc16 := uint16(data[1])<<8 | uint16(data[2])
-		dpc := uint32(dpc16) & 0x3FFF
-		fmt.Printf("  DPC raw: 0x%04X, masked: 0x%04X (%d)\n", dpc16, dpc, dpc)
+		// Convert the 4 bytes to a 32-bit value (little-endian interpretation for MTP3)
+		rl := uint32(data[1]) | uint32(data[2])<<8 | uint32(data[3])<<16 | uint32(data[4])<<24
 
-		// OPC calculation
-		opcPart1 := uint32(data[2]) & 0x03 // Lower 2 bits of byte 3
-		opcPart2 := uint32(data[3])        // Whole byte 2
-		opcPart3 := uint32(data[4]) >> 6   // Upper 3 bits of byte 5
-		opc := (opcPart1 << 12) | (opcPart2 << 4) | opcPart3
-		fmt.Printf("  OPC parts: %02b %08b %02b = %d\n", opcPart1, opcPart2, opcPart3, opc)
+		// DPC: 14 bits (bits 0-13)
+		dpc := rl & 0x3FFF
 
-		// SLS calculation
-		sls := data[4] & 0x0F
-		fmt.Printf("  SLS: %04b = %d\n", sls, sls)
+		// OPC: 14 bits (bits 14-27)
+		opc := (rl >> 14) & 0x3FFF
+
+		// SLS: 4 bits (bits 28-31)
+		sls := uint8((rl >> 28) & 0x0F)
+
+		fmt.Printf("DPC: %d (0x%04X)\n", dpc, dpc)
+		fmt.Printf("OPC: %d (0x%04X)\n", opc, opc)
+		fmt.Printf("SLS: %d (0x%01X)\n", sls, sls)
 
 		mtp3.RoutingLabel = MTP3RoutingLabel{
 			DPC:                   dpc,
@@ -277,7 +274,7 @@ func parseMTP3(data []byte) (*MTP3Message, error) {
 
 	// ISUP payload
 	if len(data) > 5 {
-		mtp3.Data = data[6:]
+		mtp3.Data = data[5:]
 		fmt.Printf("ISUP payload: %d bytes\n", len(mtp3.Data))
 	}
 
