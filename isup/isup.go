@@ -82,6 +82,24 @@ const (
 	ISUPMessageTypeLPA  = 36 // Loopback Acknowledgment
 	ISUPMessageTypeCSVQ = 37 // CUG Selection and Validation Request
 	ISUPMessageTypeCSVR = 38 // CUG Selection and Validation Response
+	ISUPMessageTypeGRA  = 41 // Circuit Group Reset Acknowledgment
+	ISUPMessageTypeCQR  = 43 // Circuit Group Query Request
+	ISUPMessageTypeCPG  = 44 // Call Progress
+	ISUPMessageTypeUSR  = 45 // User-to-User Information
+	ISUPMessageTypeUCIC = 46 // Unequipped Circuit Identification Code
+	ISUPMessageTypeCFN  = 47 // Confusion
+	ISUPMessageTypeOLM  = 48 // Overload
+	ISUPMessageTypeNRM  = 50 // Network Resource Management
+	ISUPMessageTypeFAC  = 51 // Facility
+	ISUPMessageTypeUPT  = 52 // User Part Test
+	ISUPMessageTypeUPA  = 53 // User Part Available
+	ISUPMessageTypeIDR  = 54 // Identification Request
+	ISUPMessageTypeIDS  = 55 // Identification Response
+	ISUPMessageTypeSEG  = 56 // Segmentation
+	ISUPMessageTypeLPR  = 64 // Loop Prevention
+	ISUPMessageTypeAPT  = 65 // Application Transport
+	ISUPMessageTypePRI  = 66 // Pre-release Information
+	ISUPMessageTypeSAN  = 67 // Subsequent Directory Number
 )
 
 // ISUP message type to string mapping
@@ -121,6 +139,24 @@ var ISUPMessageTypeNames = map[uint8]string{
 	ISUPMessageTypeLPA:  "LPA (Loopback Acknowledgment)",
 	ISUPMessageTypeCSVQ: "CSVQ (CUG Selection and Validation Request)",
 	ISUPMessageTypeCSVR: "CSVR (CUG Selection and Validation Response)",
+	ISUPMessageTypeGRA:  "GRA (Circuit Group Reset Acknowledgment)",
+	ISUPMessageTypeCQR:  "CQR (Circuit Group Query Request)",
+	ISUPMessageTypeCPG:  "CPG (Call Progress)",
+	ISUPMessageTypeUSR:  "USR (User-to-User Information)",
+	ISUPMessageTypeUCIC: "UCIC (Unequipped Circuit Identification Code)",
+	ISUPMessageTypeCFN:  "CFN (Confusion)",
+	ISUPMessageTypeOLM:  "OLM (Overload)",
+	ISUPMessageTypeNRM:  "NRM (Network Resource Management)",
+	ISUPMessageTypeFAC:  "FAC (Facility)",
+	ISUPMessageTypeUPT:  "UPT (User Part Test)",
+	ISUPMessageTypeUPA:  "UPA (User Part Available)",
+	ISUPMessageTypeIDR:  "IDR (Identification Request)",
+	ISUPMessageTypeIDS:  "IDS (Identification Response)",
+	ISUPMessageTypeSEG:  "SEG (Segmentation)",
+	ISUPMessageTypeLPR:  "LPR (Loop Prevention)",
+	ISUPMessageTypeAPT:  "APT (Application Transport)",
+	ISUPMessageTypePRI:  "PRI (Pre-release Information)",
+	ISUPMessageTypeSAN:  "SAN (Subsequent Directory Number)",
 }
 
 // GetISUPMessageTypeName returns the human-readable name for an ISUP message type
