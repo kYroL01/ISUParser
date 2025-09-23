@@ -21,6 +21,12 @@ const (
 	ProtocolM3UA    = "m3ua"
 )
 
+// ISUP types
+const (
+	ITU  = 1
+	ANSI = 2
+)
+
 // M2PA Message Header (RFC 4165)
 type M2PAHeader struct {
 	Version       uint8  `json:"version"`
@@ -63,8 +69,9 @@ type M3UAProtocolData struct {
 
 // M3UA Message
 type M3UAMessage struct {
-	Header M3UACommonHeader `json:"header"`
-	Data   M3UAProtocolData `json:"protocol_data,omitempty"`
+	Header          M3UACommonHeader `json:"header"`
+	ISUPMessageType uint8            `json:"isup_message_type"`
+	Data            M3UAProtocolData `json:"protocol_data,omitempty"`
 }
 
 // MTP3 Routing Label
@@ -79,6 +86,7 @@ type MTP3Message struct {
 	ServiceIndicator uint8            `json:"service_indicator"`
 	NetworkIndicator uint8            `json:"network_indicator"`
 	RoutingLabel     MTP3RoutingLabel `json:"routing_label"`
+	ISUPMessageType  uint8            `json:"isup_message_type"`
 	Data             []byte           `json:"data"` // Contains ISUP message
 }
 
@@ -245,6 +253,14 @@ func parseMTP3(data []byte) (*MTP3Message, error) {
 	fmt.Printf("  Network Indicator: bits %02b = %d\n", (sio>>6)&0x03, mtp3.NetworkIndicator)
 	fmt.Printf("  Spare: bits %02b = %d\n", (sio>>4)&0x03, (sio>>4)&0x03)
 	fmt.Printf("  Service Indicator: bits %04b = %d\n", sio&0x0F, mtp3.ServiceIndicator)
+
+	// Determine ISUP format based on Service Indicator
+	switch mtp3.ServiceIndicator {
+	case 5:
+		mtp3.ISUPMessageType = ITU
+	case 2:
+		mtp3.ISUPMessageType = ANSI
+	}
 
 	// Routing Label parsing - Extract fields according to MTP3 specification
 	if len(data) >= 5 {
@@ -474,7 +490,7 @@ func main() {
 							parsedMessage.MTP3 = mtp3Msg
 
 							if len(mtp3Msg.Data) > 0 {
-								if isupMsg, err := isup.ParseISUP(mtp3Msg.Data); err == nil {
+								if isupMsg, err := isup.ParseISUP(mtp3Msg.Data, mtp3Msg.ISUPMessageType); err == nil {
 									parsedMessage.ISUP = isupMsg
 								}
 							}
@@ -493,7 +509,7 @@ func main() {
 				// Parse ISUP from Protocol Data
 				if m3uaMsg.Header.MessageClass == 3 && m3uaMsg.Header.MessageType == 1 {
 					if len(m3uaMsg.Data.Data) > 0 {
-						if isupMsg, err := isup.ParseISUP(m3uaMsg.Data.Data); err == nil {
+						if isupMsg, err := isup.ParseISUP(m3uaMsg.Data.Data, m3uaMsg.ISUPMessageType); err == nil {
 							parsedMessage.ISUP = isupMsg
 						}
 					}

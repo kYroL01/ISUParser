@@ -17,15 +17,28 @@ type ISUPMessage struct {
 }
 
 // ParseISUP parses an ISUP message from bytes
-func ParseISUP(data []byte) (*ISUPMessage, error) {
+func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, error) {
 	if len(data) < 3 {
 		return nil, fmt.Errorf("ISUP message too short (%d bytes)", len(data))
 	}
 
 	fmt.Println("ISUP raw data:", data)
 
-	isITUFormat := true   // Assume not ITU-T by default
-	isANSIFormat := false // Assume ANSI by default
+	// Determine ISUP format (ITU-T or ANSI) based on context or configuration
+	if ISUPType != 2 && ISUPType != 5 {
+		return nil, fmt.Errorf("unknown ISUP type: %d", ISUPType)
+	}
+	isANSIFormat := false
+	isITUFormat := false
+	switch ISUPType {
+	case 2:
+		isANSIFormat = true // Assume ANSI by default
+		fmt.Println("Parsing as ANSI ISUP")
+	case 5:
+		isITUFormat = true // Assume not ITU-T by default
+		fmt.Println("Parsing as ITU-T ISUP")
+	}
+
 	var cic uint16
 
 	if isITUFormat {
