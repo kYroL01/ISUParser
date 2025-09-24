@@ -23,7 +23,7 @@ const (
 
 // ISUP types
 const (
-	ITU  = 1
+	ITU  = 5
 	ANSI = 2
 )
 
@@ -36,8 +36,8 @@ type M2PAHeader struct {
 	MessageLength uint32 `json:"message_length"`
 }
 
-// M2PA User Data Message
-type M2PAUserData struct {
+// M2PA Data Message
+type M2PAData struct {
 	Header   M2PAHeader `json:"header"`
 	Ununsed1 uint8      `json:"unused1"`
 	BSN      uint32     `json:"bsn"` // Backward Sequence Number
@@ -47,8 +47,8 @@ type M2PAUserData struct {
 	Data     []byte     `json:"data"` // Contains MTP3 + ISUP message
 }
 
-// M3UA Common Header
-type M3UACommonHeader struct {
+// M3UA Header
+type M3UAHeader struct {
 	Version       uint8  `json:"version"`
 	Reserved      uint8  `json:"reserved"`
 	MessageClass  uint8  `json:"message_class"`
@@ -56,8 +56,8 @@ type M3UACommonHeader struct {
 	MessageLength uint32 `json:"message_length"`
 }
 
-// M3UA Protocol Data
-type M3UAProtocolData struct {
+// M3UA Data
+type M3UAData struct {
 	OriginPointCode      uint32 `json:"origin_point_code"`
 	DestinationPointCode uint32 `json:"destination_point_code"`
 	ServiceIndicator     uint8  `json:"service_indicator"`
@@ -69,9 +69,9 @@ type M3UAProtocolData struct {
 
 // M3UA Message
 type M3UAMessage struct {
-	Header          M3UACommonHeader `json:"header"`
-	ISUPMessageType uint8            `json:"isup_message_type"`
-	Data            M3UAProtocolData `json:"protocol_data,omitempty"`
+	Header          M3UAHeader `json:"header"`
+	ISUPMessageType uint8      `json:"isup_message_type"`
+	Data            M3UAData   `json:"protocol_data,omitempty"`
 }
 
 // MTP3 Routing Label
@@ -101,7 +101,7 @@ type ParsedMessage struct {
 	DestinationPort uint16            `json:"destination_port"`
 	SCTPTSN         uint32            `json:"sctp_tsn,omitempty"`
 	SCTPPPID        uint32            `json:"sctp_ppid,omitempty"`
-	M2PA            *M2PAUserData     `json:"m2pa,omitempty"`
+	M2PA            *M2PAData         `json:"m2pa,omitempty"`
 	M3UA            *M3UAMessage      `json:"m3ua,omitempty"`
 	MTP3            *MTP3Message      `json:"mtp3,omitempty"`
 	ISUP            *isup.ISUPMessage `json:"isup,omitempty"`
@@ -110,7 +110,7 @@ type ParsedMessage struct {
 }
 
 // Parse M2PA message from bytes with correct field sizes
-func parseM2PA(data []byte) (*M2PAUserData, error) {
+func parseM2PA(data []byte) (*M2PAData, error) {
 
 	fmt.Printf("M2PA data length: %d bytes\n", len(data))
 	if len(data) < 8 {
@@ -131,7 +131,7 @@ func parseM2PA(data []byte) (*M2PAUserData, error) {
 	fmt.Printf("M2PA Header: Version=%d, Class=%d, Type=%d, Length=%d\n",
 		header.Version, header.MessageClass, header.MessageType, header.MessageLength)
 
-	msg := &M2PAUserData{
+	msg := &M2PAData{
 		Header: header,
 	}
 
@@ -200,7 +200,7 @@ func parseM3UA(data []byte) (*M3UAMessage, error) {
 		return nil, fmt.Errorf("M3UA message too short (%d bytes)", len(data))
 	}
 
-	header := M3UACommonHeader{
+	header := M3UAHeader{
 		Version:       data[0],
 		Reserved:      data[1],
 		MessageClass:  data[2],
@@ -214,7 +214,7 @@ func parseM3UA(data []byte) (*M3UAMessage, error) {
 
 	// Parse Protocol Data for Data messages
 	if header.MessageClass == 3 && header.MessageType == 1 && len(data) >= 20 {
-		protocolData := M3UAProtocolData{
+		protocolData := M3UAData{
 			OriginPointCode:      binary.BigEndian.Uint32(data[8:12]) & 0x00FFFFFF,
 			DestinationPointCode: binary.BigEndian.Uint32(data[12:16]) & 0x00FFFFFF,
 			ServiceIndicator:     data[16] & 0x0F,
@@ -566,7 +566,7 @@ func main() {
 			fmt.Printf("  MTP3: OPC=%d, DPC=%d, SI=%d\n", msg.MTP3.RoutingLabel.OPC, msg.MTP3.RoutingLabel.DPC, msg.MTP3.ServiceIndicator)
 		}
 		if msg.ISUP != nil {
-			fmt.Printf("  ISUP: Type=%d, CIC=%d\n", msg.ISUP.Header.MessageType, msg.ISUP.CIC)
+			fmt.Printf("  ISUP: Type=%d, CIC=%d\n", msg.ISUP.MessageType, msg.ISUP.CIC)
 		}
 		if msg.Error != "" {
 			fmt.Printf("  Error: %s\n", msg.Error)

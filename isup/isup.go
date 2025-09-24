@@ -4,16 +4,11 @@ import (
 	"fmt"
 )
 
-// ISUP Common Header
-type ISUPHeader struct {
-	MessageType uint8 `json:"message_type"`
-}
-
 // ISUP Message
 type ISUPMessage struct {
-	Header ISUPHeader `json:"header"`
-	CIC    uint16     `json:"cic"`
-	Data   []byte     `json:"data"`
+	MessageType uint8  `json:"message_type"`
+	CIC         uint16 `json:"cic"`
+	Data        []byte `json:"data"`
 }
 
 // ParseISUP parses an ISUP message from bytes
@@ -62,80 +57,83 @@ func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, error) {
 	fmt.Println("ISUP CIC:", cic)
 
 	// Message type - 1 byte
-	msg := &ISUPMessage{
-		CIC: cic,
-		Header: ISUPHeader{
-			MessageType: data[2],
-		},
+	ISUPmsg := &ISUPMessage{
+		CIC:         cic,
+		MessageType: data[2],
 	}
 
-	fmt.Println("ISUP Message Type:", msg.Header.MessageType, "(", GetISUPMessageTypeName(msg.Header.MessageType), ")")
+	fmt.Println("ISUP Message Type:", ISUPmsg.MessageType, "(", GetISUPMessageTypeName(ISUPmsg.MessageType), ")")
 
-	if len(data) > 3 {
-		msg.Data = data[3:]
-	}
+	ISUPmsg.Data = data[3:]
 
-	return msg, nil
+	return ISUPmsg, nil
 }
 
 // ISUP message type constants
 const (
-	ISUPMessageTypeIAM  = 1  // Initial Address Message
-	ISUPMessageTypeSAM  = 2  // Subsequent Address Message
-	ISUPMessageTypeINR  = 3  // Information Request
-	ISUPMessageTypeINF  = 4  // Information
-	ISUPMessageTypeCOT  = 5  // Continuity
-	ISUPMessageTypeACM  = 6  // Address Complete Message
-	ISUPMessageTypeCON  = 7  // Connect
-	ISUPMessageTypeFOT  = 8  // Forward Transfer
-	ISUPMessageTypeANM  = 9  // Answer Message
-	ISUPMessageTypeREL  = 12 // Release
-	ISUPMessageTypeSUS  = 13 // Suspend
-	ISUPMessageTypeRES  = 14 // Resume
-	ISUPMessageTypeRLC  = 16 // Release Complete
-	ISUPMessageTypeCCR  = 17 // Continuity Check Request
-	ISUPMessageTypeRSC  = 18 // Reset Circuit
-	ISUPMessageTypeBLO  = 19 // Blocking
-	ISUPMessageTypeUBL  = 20 // Unblocking
-	ISUPMessageTypeBLA  = 21 // Blocking Acknowledgment
-	ISUPMessageTypeUBA  = 22 // Unblocking Acknowledgment
-	ISUPMessageTypeGRS  = 23 // Circuit Group Reset
-	ISUPMessageTypeCGB  = 24 // Circuit Group Blocking
-	ISUPMessageTypeCGU  = 25 // Circuit Group Unblocking
-	ISUPMessageTypeCGBA = 26 // Circuit Group Blocking Acknowledgment
-	ISUPMessageTypeCGUA = 27 // Circuit Group Unblocking Acknowledgment
-	ISUPMessageTypeCMR  = 28 // Call Modification Request
-	ISUPMessageTypeCMC  = 29 // Call Modification Completed
-	ISUPMessageTypeCMRJ = 30 // Call Modification Reject
-	ISUPMessageTypeFAR  = 31 // Facility Request
-	ISUPMessageTypeFAA  = 32 // Facility Accepted
-	ISUPMessageTypeFRJ  = 33 // Facility Reject
-	ISUPMessageTypeFAD  = 34 // Facility Deactivated
-	ISUPMessageTypeFAI  = 35 // Facility Information
-	ISUPMessageTypeLPA  = 36 // Loopback Acknowledgment
-	ISUPMessageTypeCSVQ = 37 // CUG Selection and Validation Request
-	ISUPMessageTypeCSVR = 38 // CUG Selection and Validation Response
-	ISUPMessageTypeGRA  = 41 // Circuit Group Reset Acknowledgment
-	ISUPMessageTypeCQR  = 43 // Circuit Group Query Request
-	ISUPMessageTypeCPG  = 44 // Call Progress
-	ISUPMessageTypeUSR  = 45 // User-to-User Information
-	ISUPMessageTypeUCIC = 46 // Unequipped Circuit Identification Code
-	ISUPMessageTypeCFN  = 47 // Confusion
-	ISUPMessageTypeOLM  = 48 // Overload
-	ISUPMessageTypeNRM  = 50 // Network Resource Management
-	ISUPMessageTypeFAC  = 51 // Facility
-	ISUPMessageTypeUPT  = 52 // User Part Test
-	ISUPMessageTypeUPA  = 53 // User Part Available
-	ISUPMessageTypeIDR  = 54 // Identification Request
-	ISUPMessageTypeIDS  = 55 // Identification Response
-	ISUPMessageTypeSEG  = 56 // Segmentation
-	ISUPMessageTypeLPR  = 64 // Loop Prevention
-	ISUPMessageTypeAPT  = 65 // Application Transport
-	ISUPMessageTypePRI  = 66 // Pre-release Information
-	ISUPMessageTypeSAN  = 67 // Subsequent Directory Number
+	ISUPMessageTypeIAM   = 1  // Initial Address Message
+	ISUPMessageTypeSAM   = 2  // Subsequent Address Message
+	ISUPMessageTypeINR   = 3  // Information Request
+	ISUPMessageTypeINF   = 4  // Information
+	ISUPMessageTypeCOT   = 5  // Continuity
+	ISUPMessageTypeACM   = 6  // Address Complete Message
+	ISUPMessageTypeCON   = 7  // Connect
+	ISUPMessageTypeFOT   = 8  // Forward Transfer
+	ISUPMessageTypeANM   = 9  // Answer Message
+	ISUPMessageReserved1 = 10 // "Reserved"
+	ISUPMessageReserved2 = 11 // "Reserved"
+	ISUPMessageTypeREL   = 12 // Release
+	ISUPMessageTypeSUS   = 13 // Suspend
+	ISUPMessageTypeRES   = 14 // Resume
+	ISUPMessageReserved3 = 15 // "Reserved"
+	ISUPMessageTypeRLC   = 16 // Release Complete
+	ISUPMessageTypeCCR   = 17 // Continuity Check Request
+	ISUPMessageTypeRSC   = 18 // Reset Circuit
+	ISUPMessageTypeBLO   = 19 // Blocking
+	ISUPMessageTypeUBL   = 20 // Unblocking
+	ISUPMessageTypeBLA   = 21 // Blocking Acknowledgment
+	ISUPMessageTypeUBA   = 22 // Unblocking Acknowledgment
+	ISUPMessageTypeGRS   = 23 // Circuit Group Reset
+	ISUPMessageTypeCGB   = 24 // Circuit Group Blocking
+	ISUPMessageTypeCGU   = 25 // Circuit Group Unblocking
+	ISUPMessageTypeCGBA  = 26 // Circuit Group Blocking Acknowledgment
+	ISUPMessageTypeCGUA  = 27 // Circuit Group Unblocking Acknowledgment
+	ISUPMessageTypeCMR   = 28 // Call Modification Request
+	ISUPMessageTypeCMC   = 29 // Call Modification Completed
+	ISUPMessageTypeCMRJ  = 30 // Call Modification Reject
+	ISUPMessageTypeFAR   = 31 // Facility Request
+	ISUPMessageTypeFAA   = 32 // Facility Accepted
+	ISUPMessageTypeFRJ   = 33 // Facility Reject
+	ISUPMessageTypeFAD   = 34 // Facility Deactivated
+	ISUPMessageTypeFAI   = 35 // Facility Information
+	ISUPMessageTypeLPA   = 36 // Loopback Acknowledgment
+	ISUPMessageTypeCSVQ  = 37 // CUG Selection and Validation Request
+	ISUPMessageTypeCSVR  = 38 // CUG Selection and Validation Response
+	ISUPMessageTypeDRS   = 39 // Delayed Release
+	ISUPMessageTypePAM   = 40 // Pass Along
+	ISUPMessageTypeGRA   = 41 // Circuit Group Reset Acknowledgment
+	ISUPMessageTypeCQM   = 42 // Circuit Group Query
+	ISUPMessageTypeCQR   = 43 // Circuit Group Query Request
+	ISUPMessageTypeCPG   = 44 // Call Progress
+	ISUPMessageTypeUSR   = 45 // User-to-User Information
+	ISUPMessageTypeUCIC  = 46 // Unequipped Circuit Identification Code
+	ISUPMessageTypeCFN   = 47 // Confusion
+	ISUPMessageTypeOLM   = 48 // Overload
+	ISUPMessageTypeCRG   = 49 // Charge information
+	ISUPMessageTypeNRM   = 50 // Network Resource Management
+	ISUPMessageTypeFAC   = 51 // Facility
+	ISUPMessageTypeUPT   = 52 // User Part Test
+	ISUPMessageTypeUPA   = 53 // User Part Available
+	ISUPMessageTypeIDR   = 54 // Identification Request
+	ISUPMessageTypeIDS   = 55 // Identification Response
+	ISUPMessageTypeSEG   = 56 // Segmentation
+	ISUPMessageTypeLPR   = 64 // Loop Prevention
+	ISUPMessageTypeAPT   = 65 // Application Transport
+	ISUPMessageTypePRI   = 66 // Pre-release Information
+	ISUPMessageTypeSAN   = 67 // Subsequent Directory Number
 )
 
-// ISUP message type to string mapping
+// ISUPMessageTypeNames maps ISUP message type codes to human-readable names
 var ISUPMessageTypeNames = map[uint8]string{
 	ISUPMessageTypeIAM:  "IAM (Initial Address Message)",
 	ISUPMessageTypeSAM:  "SAM (Subsequent Address Message)",
@@ -172,13 +170,17 @@ var ISUPMessageTypeNames = map[uint8]string{
 	ISUPMessageTypeLPA:  "LPA (Loopback Acknowledgment)",
 	ISUPMessageTypeCSVQ: "CSVQ (CUG Selection and Validation Request)",
 	ISUPMessageTypeCSVR: "CSVR (CUG Selection and Validation Response)",
+	ISUPMessageTypeDRS:  "DRS (Delayed Release)", // ADDED
+	ISUPMessageTypePAM:  "PAM (Pass Along)",      // ADDED
 	ISUPMessageTypeGRA:  "GRA (Circuit Group Reset Acknowledgment)",
+	ISUPMessageTypeCQM:  "CQM (Circuit Group Query)", // ADDED
 	ISUPMessageTypeCQR:  "CQR (Circuit Group Query Request)",
 	ISUPMessageTypeCPG:  "CPG (Call Progress)",
 	ISUPMessageTypeUSR:  "USR (User-to-User Information)",
 	ISUPMessageTypeUCIC: "UCIC (Unequipped Circuit Identification Code)",
 	ISUPMessageTypeCFN:  "CFN (Confusion)",
 	ISUPMessageTypeOLM:  "OLM (Overload)",
+	ISUPMessageTypeCRG:  "CRG (Charge information)", // ADDED
 	ISUPMessageTypeNRM:  "NRM (Network Resource Management)",
 	ISUPMessageTypeFAC:  "FAC (Facility)",
 	ISUPMessageTypeUPT:  "UPT (User Part Test)",
