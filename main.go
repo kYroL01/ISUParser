@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"isup-parser/isup"
+	"isup-parser/m2pa"
+	"isup-parser/m3ua"
+	"isup-parser/mtp3"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -27,69 +30,6 @@ const (
 	ANSI = 2
 )
 
-// M2PA Message Header (RFC 4165)
-type M2PAHeader struct {
-	Version       uint8  `json:"version"`
-	Spare         uint8  `json:"spare"`
-	MessageClass  uint8  `json:"message_class"`
-	MessageType   uint8  `json:"message_type"`
-	MessageLength uint32 `json:"message_length"`
-}
-
-// M2PA Data Message
-type M2PAData struct {
-	Header   M2PAHeader `json:"header"`
-	Ununsed1 uint8      `json:"unused1"`
-	BSN      uint32     `json:"bsn"` // Backward Sequence Number
-	Ununsed2 uint8      `json:"unused2"`
-	FSN      uint32     `json:"fsn"` // Forward Sequence Number
-	Priority uint8      `json:"priority"`
-	Data     []byte     `json:"data"` // Contains MTP3 + ISUP message
-}
-
-// M3UA Header
-type M3UAHeader struct {
-	Version       uint8  `json:"version"`
-	Reserved      uint8  `json:"reserved"`
-	MessageClass  uint8  `json:"message_class"`
-	MessageType   uint8  `json:"message_type"`
-	MessageLength uint32 `json:"message_length"`
-}
-
-// M3UA Data
-type M3UAData struct {
-	OriginPointCode      uint32 `json:"origin_point_code"`
-	DestinationPointCode uint32 `json:"destination_point_code"`
-	ServiceIndicator     uint8  `json:"service_indicator"`
-	NetworkIndicator     uint8  `json:"network_indicator"`
-	MessagePriority      uint8  `json:"message_priority"`
-	SignalingLink        uint8  `json:"signaling_link"`
-	Data                 []byte `json:"data"` // Contains ISUP message
-}
-
-// M3UA Message
-type M3UAMessage struct {
-	Header          M3UAHeader `json:"header"`
-	ISUPMessageType uint8      `json:"isup_message_type"`
-	Data            M3UAData   `json:"protocol_data,omitempty"`
-}
-
-// MTP3 Routing Label
-type MTP3RoutingLabel struct {
-	DPC                   uint32 `json:"dpc"`
-	OPC                   uint32 `json:"opc"`
-	SignalingLinkSelector uint8  `json:"signaling_link_selector"`
-}
-
-// MTP3 Message
-type MTP3Message struct {
-	ServiceIndicator uint8            `json:"service_indicator"`
-	NetworkIndicator uint8            `json:"network_indicator"`
-	RoutingLabel     MTP3RoutingLabel `json:"routing_label"`
-	ISUPMessageType  uint8            `json:"isup_message_type"`
-	Data             []byte           `json:"data"` // Contains ISUP message
-}
-
 // Complete parsed message structure
 type ParsedMessage struct {
 	Timestamp       time.Time         `json:"timestamp"`
@@ -101,90 +41,12 @@ type ParsedMessage struct {
 	DestinationPort uint16            `json:"destination_port"`
 	SCTPTSN         uint32            `json:"sctp_tsn,omitempty"`
 	SCTPPPID        uint32            `json:"sctp_ppid,omitempty"`
-	M2PA            *M2PAData         `json:"m2pa,omitempty"`
-	M3UA            *M3UAMessage      `json:"m3ua,omitempty"`
-	MTP3            *MTP3Message      `json:"mtp3,omitempty"`
+	M2PA            *m2pa.Data        `json:"m2pa,omitempty"`
+	M3UA            *m3ua.Message     `json:"m3ua,omitempty"`
+	MTP3            *mtp3.Message     `json:"mtp3,omitempty"`
 	ISUP            *isup.ISUPMessage `json:"isup,omitempty"`
 	RawPayload      []byte            `json:"raw_payload,omitempty"`
 	Error           string            `json:"error,omitempty"`
-}
-
-// Parse M2PA message from bytes with correct field sizes
-func parseM2PA(data []byte) (*M2PAData, error) {
-
-	fmt.Printf("M2PA data length: %d bytes\n", len(data))
-	if len(data) < 8 {
-		return nil, fmt.Errorf("M2PA message too short (%d bytes)", len(data))
-	}
-
-	// Print first few bytes for debugging
-	fmt.Printf("M2PA header bytes: %v\n", data[:min(20, len(data))])
-
-	header := M2PAHeader{
-		Version:       data[0],
-		Spare:         data[1],
-		MessageClass:  data[2],
-		MessageType:   data[3],
-		MessageLength: binary.BigEndian.Uint32(data[4:8]),
-	}
-
-	fmt.Printf("M2PA Header: Version=%d, Class=%d, Type=%d, Length=%d\n",
-		header.Version, header.MessageClass, header.MessageType, header.MessageLength)
-
-	msg := &M2PAData{
-		Header: header,
-	}
-
-	offset := 8
-
-	// Parse Unused1 (1 byte)
-	if offset < len(data) {
-		msg.Ununsed1 = data[offset]
-		fmt.Printf("Unused1: %d (0x%02X)\n", msg.Ununsed1, msg.Ununsed1)
-		offset += 1
-	}
-
-	// Parse BSN (3 bytes)
-	if offset+3 <= len(data) {
-		bsnBytes := make([]byte, 4)
-		copy(bsnBytes[1:], data[offset:offset+3]) // Pad with 0 at beginning
-		msg.BSN = binary.BigEndian.Uint32(bsnBytes)
-		fmt.Printf("BSN (3 bytes): %d (Hex: %x)\n", msg.BSN, data[offset:offset+3])
-		offset += 3
-	}
-
-	// Parse Unused2 (1 byte)
-	if offset < len(data) {
-		msg.Ununsed2 = data[offset]
-		fmt.Printf("Unused2: %d (0x%02X)\n", msg.Ununsed2, msg.Ununsed2)
-		offset += 1
-	}
-
-	// Parse FSN (3 bytes)
-	if offset+3 <= len(data) {
-		fsnBytes := make([]byte, 4)
-		copy(fsnBytes[1:], data[offset:offset+3]) // Pad with 0 at beginning
-		msg.FSN = binary.BigEndian.Uint32(fsnBytes)
-		fmt.Printf("FSN (3 bytes): %d (Hex: %x)\n", msg.FSN, data[offset:offset+3])
-		offset += 3
-	}
-
-	// Parse Priority (1 byte)
-	if offset < len(data) {
-		msg.Priority = data[offset]
-		fmt.Printf("Priority: %d (0x%02X)\n", msg.Priority, msg.Priority)
-		offset += 1
-	}
-
-	// Remaining data contains MTP3 + ISUP
-	if offset < len(data) {
-		msg.Data = data[offset:]
-		fmt.Printf("M2PA payload: %d bytes (starts with: %x)\n", len(msg.Data), msg.Data[:min(10, len(msg.Data))])
-	} else {
-		fmt.Println("No M2PA payload data")
-	}
-
-	return msg, nil
 }
 
 func min(a, b int) int {
@@ -192,109 +54,6 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// Parse M3UA message from bytes
-func parseM3UA(data []byte) (*M3UAMessage, error) {
-	if len(data) < 8 {
-		return nil, fmt.Errorf("M3UA message too short (%d bytes)", len(data))
-	}
-
-	header := M3UAHeader{
-		Version:       data[0],
-		Reserved:      data[1],
-		MessageClass:  data[2],
-		MessageType:   data[3],
-		MessageLength: binary.BigEndian.Uint32(data[4:8]),
-	}
-
-	msg := &M3UAMessage{
-		Header: header,
-	}
-
-	// Parse Protocol Data for Data messages
-	if header.MessageClass == 3 && header.MessageType == 1 && len(data) >= 20 {
-		protocolData := M3UAData{
-			OriginPointCode:      binary.BigEndian.Uint32(data[8:12]) & 0x00FFFFFF,
-			DestinationPointCode: binary.BigEndian.Uint32(data[12:16]) & 0x00FFFFFF,
-			ServiceIndicator:     data[16] & 0x0F,
-			NetworkIndicator:     data[17] & 0x0F,
-			MessagePriority:      data[18] & 0x0F,
-			SignalingLink:        data[19],
-		}
-
-		if len(data) > 20 {
-			protocolData.Data = data[20:]
-		}
-
-		msg.Data = protocolData
-	}
-
-	return msg, nil
-}
-
-// Parse MTP3 message from bytes
-// Enhanced debug version of MTP3 parsing
-func parseMTP3(data []byte) (*MTP3Message, error) {
-	if len(data) < 5 {
-		return nil, fmt.Errorf("MTP3 message too short (%d bytes)", len(data))
-	}
-
-	fmt.Printf("MTP3 raw data (%d bytes): %v\n", len(data), data[:min(10, len(data))])
-
-	// Service Information Octet
-	sio := data[0]
-	mtp3 := &MTP3Message{
-		NetworkIndicator: (sio >> 6) & 0x03,
-		ServiceIndicator: sio & 0x0F,
-	}
-
-	fmt.Printf("SIO: 0x%02X (binary: %08b)\n", sio, sio)
-	fmt.Printf("  Network Indicator: bits %02b = %d\n", (sio>>6)&0x03, mtp3.NetworkIndicator)
-	fmt.Printf("  Spare: bits %02b = %d\n", (sio>>4)&0x03, (sio>>4)&0x03)
-	fmt.Printf("  Service Indicator: bits %04b = %d\n", sio&0x0F, mtp3.ServiceIndicator)
-
-	// Determine ISUP format based on Service Indicator
-	switch mtp3.ServiceIndicator {
-	case 5:
-		mtp3.ISUPMessageType = ITU
-	case 2:
-		mtp3.ISUPMessageType = ANSI
-	}
-
-	// Routing Label parsing - Extract fields according to MTP3 specification
-	if len(data) >= 5 {
-
-		// Convert the 4 bytes to a 32-bit value (little-endian interpretation for MTP3)
-		rl := uint32(data[1]) | uint32(data[2])<<8 | uint32(data[3])<<16 | uint32(data[4])<<24
-
-		// DPC: 14 bits (bits 0-13)
-		dpc := rl & 0x3FFF
-
-		// OPC: 14 bits (bits 14-27)
-		opc := (rl >> 14) & 0x3FFF
-
-		// SLS: 4 bits (bits 28-31)
-		sls := uint8((rl >> 28) & 0x0F)
-
-		fmt.Printf("DPC: %d (0x%04X)\n", dpc, dpc)
-		fmt.Printf("OPC: %d (0x%04X)\n", opc, opc)
-		fmt.Printf("SLS: %d (0x%01X)\n", sls, sls)
-
-		mtp3.RoutingLabel = MTP3RoutingLabel{
-			DPC:                   dpc,
-			OPC:                   opc,
-			SignalingLinkSelector: sls,
-		}
-	}
-
-	// ISUP payload
-	if len(data) > 5 {
-		mtp3.Data = data[5:]
-		fmt.Printf("ISUP payload: %d bytes\n", len(mtp3.Data))
-	}
-
-	return mtp3, nil
 }
 
 // Manual SCTP chunk parsing to extract PPID and TSN
@@ -480,42 +239,32 @@ func main() {
 		switch protocol {
 		case ProtocolM2PA:
 			m2paCount++
-			if m2paMsg, err := parseM2PA(payload); err == nil {
+			if m2paMsg, err := m2pa.ParseM2PA(payload); err == nil {
 				parsedMessage.M2PA = m2paMsg
 
-				// Parse MTP3 and ISUP from User Data
-				if m2paMsg.Header.MessageClass == 11 && m2paMsg.Header.MessageType == 1 {
-					if len(m2paMsg.Data) > 0 {
-						if mtp3Msg, err := parseMTP3(m2paMsg.Data); err == nil {
-							parsedMessage.MTP3 = mtp3Msg
+				if m2paMsg.IsUserData() && len(m2paMsg.Data) > 0 {
+					if mtp3Msg, err := mtp3.ParseMTP3(m2paMsg.Data); err == nil {
+						parsedMessage.MTP3 = mtp3Msg
 
-							if len(mtp3Msg.Data) > 0 {
-								if isupMsg, err := isup.ParseISUP(mtp3Msg.Data, mtp3Msg.ISUPMessageType); err == nil {
-									parsedMessage.ISUP = isupMsg
-								}
+						if len(mtp3Msg.Data) > 0 {
+							if isupMsg, err := isup.ParseISUP(mtp3Msg.Data, mtp3Msg.GetISUPFormat()); err == nil {
+								parsedMessage.ISUP = isupMsg
 							}
 						}
 					}
 				}
-			} else {
-				parsedMessage.Error = fmt.Sprintf("M2PA parse error: %v", err)
 			}
 
 		case ProtocolM3UA:
 			m3uaCount++
-			if m3uaMsg, err := parseM3UA(payload); err == nil {
+			if m3uaMsg, err := m3ua.ParseM3UA(payload); err == nil {
 				parsedMessage.M3UA = m3uaMsg
 
-				// Parse ISUP from Protocol Data
-				if m3uaMsg.Header.MessageClass == 3 && m3uaMsg.Header.MessageType == 1 {
-					if len(m3uaMsg.Data.Data) > 0 {
-						if isupMsg, err := isup.ParseISUP(m3uaMsg.Data.Data, m3uaMsg.ISUPMessageType); err == nil {
-							parsedMessage.ISUP = isupMsg
-						}
+				if m3uaMsg.Data != nil && len(m3uaMsg.Data.Data) > 0 {
+					if isupMsg, err := isup.ParseISUP(m3uaMsg.Data.Data, m3uaMsg.Data.GetISUPFormat()); err == nil {
+						parsedMessage.ISUP = isupMsg
 					}
 				}
-			} else {
-				parsedMessage.Error = fmt.Sprintf("M3UA parse error: %v", err)
 			}
 		}
 
