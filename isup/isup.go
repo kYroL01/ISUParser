@@ -12,17 +12,19 @@ type ISUPMessage struct {
 }
 
 // ParseISUP parses an ISUP message from bytes
-func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, error) {
-	if len(data) < 3 {
-		return nil, fmt.Errorf("ISUP message too short (%d bytes)", len(data))
-	}
+func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, uint32, error) {
+	
+	Len := uint32(len(data))
 
-	fmt.Println("ISUP raw data:", data)
+	if Len < 3 {
+		return nil, 0, fmt.Errorf("ISUP message too short (%d bytes)", Len)
+	}
 
 	// Determine ISUP format (ITU-T or ANSI) based on context or configuration
 	if ISUPType != 2 && ISUPType != 5 {
-		return nil, fmt.Errorf("unknown ISUP type: %d", ISUPType)
+		return nil, Len, fmt.Errorf("unknown ISUP type: %d", ISUPType)
 	}
+
 	isANSIFormat := false
 	isITUFormat := false
 	switch ISUPType {
@@ -51,7 +53,7 @@ func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, error) {
 		cic = (uint16(cicHigh) << 8) | uint16(cicLow)
 
 	} else {
-		return nil, fmt.Errorf("unknown ISUP format")
+		return nil, Len, fmt.Errorf("unknown ISUP format")
 	}
 
 	fmt.Println("ISUP CIC:", cic)
@@ -66,7 +68,8 @@ func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, error) {
 
 	ISUPmsg.Data = data[3:]
 
-	return ISUPmsg, nil
+	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
+	return ISUPmsg, Len, nil
 }
 
 // ISUP message type constants

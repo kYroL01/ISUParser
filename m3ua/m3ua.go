@@ -40,9 +40,12 @@ const (
 )
 
 // Parse M3UA message from bytes
-func ParseM3UA(data []byte) (*Message, error) {
-	if len(data) < 8 {
-		return nil, fmt.Errorf("M3UA message too short (%d bytes)", len(data))
+func ParseM3UA(data []byte) (*Message, uint32, error) {
+
+	Len := uint32(len(data))
+
+	if Len < 8 {
+		return nil, 0, fmt.Errorf("M3UA message too short (%d bytes)", Len)
 	}
 
 	header := Header{
@@ -60,7 +63,7 @@ func ParseM3UA(data []byte) (*Message, error) {
 	// Parse Protocol Data for Data messages
 	if header.MessageClass == MessageClassTransfer &&
 		header.MessageType == MessageTypeData &&
-		len(data) >= 20 {
+		Len >= 20 {
 
 		protocolData := &ProtocolData{
 			OriginPointCode:      binary.BigEndian.Uint32(data[8:12]) & 0x00FFFFFF,
@@ -71,14 +74,16 @@ func ParseM3UA(data []byte) (*Message, error) {
 			SignalingLink:        data[19],
 		}
 
-		if len(data) > 20 {
+		if Len > 20 {
 			protocolData.Data = data[20:]
 		}
 
 		msg.Data = protocolData
 	}
 
-	return msg, nil
+	Len += 8 // Including header length
+
+	return msg, Len, nil
 }
 
 // GetISUPFormat returns the ISUP format based on Service Indicator

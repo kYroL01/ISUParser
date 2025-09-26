@@ -26,9 +26,12 @@ const (
 )
 
 // Parse MTP3 message from bytes
-func ParseMTP3(data []byte) (*Message, error) {
-	if len(data) < 5 {
-		return nil, fmt.Errorf("MTP3 message too short (%d bytes)", len(data))
+func ParseMTP3(data []byte) (*Message, uint32, error) {
+	
+	Len := uint32(len(data))
+	
+	if Len < 5 {
+		return nil, 0, fmt.Errorf("MTP3 message too short (%d bytes)", Len)
 	}
 
 	// Service Information Octet
@@ -39,7 +42,7 @@ func ParseMTP3(data []byte) (*Message, error) {
 	}
 
 	// Routing Label parsing
-	if len(data) >= 5 {
+	if Len >= 5 {
 		// Convert the 4 bytes to a 32-bit value
 		rl := uint32(data[1]) | uint32(data[2])<<8 | uint32(data[3])<<16 | uint32(data[4])<<24
 
@@ -58,11 +61,11 @@ func ParseMTP3(data []byte) (*Message, error) {
 	}
 
 	// ISUP payload
-	if len(data) > 5 {
+	if Len > 5 {
 		mtp3.Data = data[5:]
 	}
 
-	return mtp3, nil
+	return mtp3, Len, nil
 }
 
 // GetISUPFormat returns the ISUP format based on Service Indicator

@@ -11,6 +11,7 @@ import (
 	"isup-parser/m2pa"
 	"isup-parser/m3ua"
 	"isup-parser/mtp3"
+	"isup-parser/sctp"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -34,6 +35,7 @@ const (
 type ParsedMessage struct {
 	Timestamp       time.Time         `json:"timestamp"`
 	PacketNumber    int               `json:"packet_number"`
+	ChunkIndex      int               `json:"chunk_index"` // Chunk Index to identify multiple chunks per packet
 	Protocol        string            `json:"protocol"`
 	SourceIP        string            `json:"source_ip"`
 	DestinationIP   string            `json:"destination_ip"`
@@ -49,91 +51,52 @@ type ParsedMessage struct {
 	Error           string            `json:"error,omitempty"`
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// Manual SCTP chunk parsing to extract PPID and TSN
-func parseSCTPChunks(sctpPayload []byte) ([]byte, uint32, uint32, error) {
-	offset := 0
-	for offset < len(sctpPayload) {
-
-		if offset+4 > len(sctpPayload) {
-			fmt.Println("Incomplete chunk header, stopping parse")
-			break
-		}
-
-		chunkType := uint16(sctpPayload[offset])
-		chunkFlags := sctpPayload[offset+1]
-		chunkLength := uint32(binary.BigEndian.Uint16(sctpPayload[offset+2 : offset+4]))
-
-		fmt.Printf("Chunk Type: %d, Flags: %x, Length: %d\n", chunkType, chunkFlags, chunkLength)
-
-		if chunkLength < 4 {
-			break
-		}
-
-		if chunkType == 0 { // DATA chunk
-			if offset+16 > len(sctpPayload) {
-				break
-			}
-
-			tsn := binary.BigEndian.Uint32(sctpPayload[offset+4 : offset+8])
-			ppid := binary.BigEndian.Uint32(sctpPayload[offset+12 : offset+16])
-
-			fmt.Println("DATA Chunk found --> TSN:", tsn, "PPID:", ppid)
-
-			// Extract user data
-			dataStart := offset + 16
-			dataEnd := offset + int(chunkLength)
-			if dataEnd > len(sctpPayload) {
-				dataEnd = len(sctpPayload)
-			}
-
-			if dataStart < dataEnd {
-				userData := sctpPayload[dataStart:dataEnd]
-				return userData, ppid, tsn, nil
-			}
-		}
-
-		// Move to next chunk
-		offset += int(chunkLength)
-		// Padding to 4 bytes
-		if offset%4 != 0 {
-			offset += 4 - (offset % 4)
-		}
-	}
-
-	return nil, 0, 0, fmt.Errorf("no DATA chunk found")
-}
-
-// Extract SCTP payload from packet
-func extractSCTPPayload(packet gopacket.Packet) ([]byte, uint32, uint32, error) {
-	// Get SCTP layer
+// Extract SCTP payload - handles both complete packets and chunks-only
+func extractSCTPPayload(packet gopacket.Packet) ([]*sctp.DataChunk, uint32, error) {
 	sctpLayer := packet.Layer(layers.LayerTypeSCTP)
-	if sctpLayer == nil {
-		return nil, 0, 0, fmt.Errorf("not SCTP packet")
+
+	// If we have a proper SCTP layer, try the complete packet parsing
+	if sctpLayer != nil {
+		sctpHeader := sctpLayer.LayerContents()
+		sctpPayload := sctpLayer.LayerPayload()
+
+		fmt.Printf("Complete SCTP packet - Header: %d bytes, Payload: %d bytes\n",
+			len(sctpHeader), len(sctpPayload))
+
+		if len(sctpHeader) >= 12 {
+			dataChunks, totalLength, err := sctp.ParseCompletePacket(sctpHeader, sctpPayload)
+			if err == nil {
+				fmt.Printf("Found %d DATA chunks in complete SCTP packet\n", len(dataChunks))
+				// Convert []sctp.DataChunk to []*sctp.DataChunk
+				ptrChunks := make([]*sctp.DataChunk, len(dataChunks))
+				for i := range dataChunks {
+					ptrChunks[i] = &dataChunks[i]
+				}
+				return ptrChunks, totalLength, nil
+			}
+			fmt.Printf("Complete packet parsing failed: %v, trying chunks-only...\n", err)
+		}
 	}
 
-	// Check the header length
-	sctpHeader := sctpLayer.LayerContents()
-	if len(sctpHeader) < 12 {
-		return nil, 0, 0, fmt.Errorf("SCTP header too short (%d bytes)", len(sctpHeader))
+	// Chunks-only parsing (for fragmented packets)
+	if transLayer := packet.TransportLayer(); transLayer != nil {
+		rawPayload := transLayer.LayerPayload()
+		if len(rawPayload) > 0 {
+			fmt.Printf("Trying chunks-only parsing on %d bytes of transport payload\n", len(rawPayload))
+			dataChunks, totalLength, err := sctp.ParseChunksOnly(rawPayload)
+			if err == nil {
+				fmt.Printf("Found %d DATA chunks in chunks-only payload\n", len(dataChunks))
+				// Convert []sctp.DataChunk to []*sctp.DataChunk
+				ptrChunks := make([]*sctp.DataChunk, len(dataChunks))
+				for i := range dataChunks {
+					ptrChunks[i] = &dataChunks[i]
+				}
+				return ptrChunks, totalLength, nil
+			}
+			fmt.Printf("Chunks-only parsing failed: %v\n", err)
+		}
 	}
-
-	sctpPayload := sctpLayer.LayerPayload()
-
-	// parse SCTP chunks
-	fmt.Println("\n\tParsing SCTP of new packet...")
-	userData, ppid, tsn, err := parseSCTPChunks(sctpPayload)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	return userData, ppid, tsn, nil
+	return nil, 0, fmt.Errorf("failed to parse SCTP data")
 }
 
 // Detect protocol based on PPID and payload content
@@ -191,7 +154,6 @@ func main() {
 		// Get network layer information
 		var srcIP, dstIP string
 		var srcPort, dstPort uint16
-
 		if netLayer := packet.NetworkLayer(); netLayer != nil {
 			srcIP = netLayer.NetworkFlow().Src().String()
 			dstIP = netLayer.NetworkFlow().Dst().String()
@@ -209,67 +171,82 @@ func main() {
 			}
 		}
 
-		// Extract SCTP payload
-		payload, ppid, tsn, err := extractSCTPPayload(packet)
+		// Extract SCTP payload (handles both complete packets and chunks-only)
+		dataChunks, sctpLength, err := extractSCTPPayload(packet)
 		if err != nil {
-			// Skip non-SCTP or malformed SCTP packets
+			fmt.Printf("Packet %d: SCTP parsing failed: %v\n", packetCount, err)
 			continue
 		}
 
-		// Detect protocol
-		protocol := detectProtocol(ppid, payload)
-		if protocol == ProtocolUnknown {
-			continue
-		}
+		fmt.Printf("Packet %d: Found %d DATA chunks, total SCTP length: %d\n",
+			packetCount, len(dataChunks), sctpLength)
 
-		parsedMessage := ParsedMessage{
-			Timestamp:       packet.Metadata().Timestamp,
-			PacketNumber:    packetCount,
-			Protocol:        protocol,
-			SourceIP:        srcIP,
-			DestinationIP:   dstIP,
-			SourcePort:      srcPort,
-			DestinationPort: dstPort,
-			SCTPTSN:         tsn,
-			SCTPPPID:        ppid,
-			RawPayload:      payload,
-		}
+		// Process each DATA chunk in the packet
+		for chunkIndex, dataChunk := range dataChunks {
+			fmt.Printf("Processing chunk %d/%d: TSN=%d, PPID=%d, Data=%d bytes\n",
+				chunkIndex+1, len(dataChunks), dataChunk.TSN, dataChunk.PPID, len(dataChunk.UserData))
 
-		// Parse based on protocol type
-		switch protocol {
-		case ProtocolM2PA:
-			m2paCount++
-			if m2paMsg, err := m2pa.ParseM2PA(payload); err == nil {
-				parsedMessage.M2PA = m2paMsg
+			// Detect protocol for this chunk
+			protocol := detectProtocol(dataChunk.PPID, dataChunk.UserData)
+			if protocol == ProtocolUnknown {
+				fmt.Printf("Chunk %d: Unknown protocol (PPID: %d)\n", chunkIndex+1, dataChunk.PPID)
+				continue
+			}
 
-				if m2paMsg.IsUserData() && len(m2paMsg.Data) > 0 {
-					if mtp3Msg, err := mtp3.ParseMTP3(m2paMsg.Data); err == nil {
-						parsedMessage.MTP3 = mtp3Msg
+			parsedMessage := ParsedMessage{
+				Timestamp:       packet.Metadata().Timestamp,
+				PacketNumber:    packetCount,
+				ChunkIndex:      chunkIndex + 1, // Add chunk index to identify multiple chunks per packet
+				Protocol:        protocol,
+				SourceIP:        srcIP,
+				DestinationIP:   dstIP,
+				SourcePort:      srcPort,
+				DestinationPort: dstPort,
+				SCTPTSN:         dataChunk.TSN,
+				SCTPPPID:        dataChunk.PPID,
+				RawPayload:      dataChunk.UserData,
+			}
 
-						if len(mtp3Msg.Data) > 0 {
-							if isupMsg, err := isup.ParseISUP(mtp3Msg.Data, mtp3Msg.GetISUPFormat()); err == nil {
-								parsedMessage.ISUP = isupMsg
+			// Parse based on protocol type (M2PA/M3UA logic here)
+			switch protocol {
+			case ProtocolM2PA:
+				m2paCount++
+				if m2paMsg, LenM2PA, err := m2pa.ParseM2PA(dataChunk.UserData); err == nil {
+					parsedMessage.M2PA = m2paMsg
+					fmt.Printf("Chunk %d: Parsed M2PA message, length: %d bytes\n", chunkIndex+1, LenM2PA)
+
+					if m2paMsg.IsUserData() && len(m2paMsg.Data) > 0 {
+						if mtp3Msg, LenMTP3, err := mtp3.ParseMTP3(m2paMsg.Data); err == nil {
+							parsedMessage.MTP3 = mtp3Msg
+							fmt.Printf("Chunk %d: Parsed MTP3 message, length: %d bytes\n", chunkIndex+1, LenMTP3)
+
+							if len(mtp3Msg.Data) > 0 {
+								if isupMsg, LenISUP, err := isup.ParseISUP(mtp3Msg.Data, mtp3Msg.GetISUPFormat()); err == nil {
+									parsedMessage.ISUP = isupMsg
+									fmt.Printf("Chunk %d: Parsed ISUP message, length: %d bytes\n", chunkIndex+1, LenISUP)
+								}
 							}
 						}
 					}
 				}
-			}
-
-		case ProtocolM3UA:
-			m3uaCount++
-			if m3uaMsg, err := m3ua.ParseM3UA(payload); err == nil {
-				parsedMessage.M3UA = m3uaMsg
-
-				if m3uaMsg.Data != nil && len(m3uaMsg.Data.Data) > 0 {
-					if isupMsg, err := isup.ParseISUP(m3uaMsg.Data.Data, m3uaMsg.Data.GetISUPFormat()); err == nil {
-						parsedMessage.ISUP = isupMsg
+			case ProtocolM3UA:
+				m3uaCount++
+				if m3uaMsg, LenM3UA, err := m3ua.ParseM3UA(dataChunk.UserData); err == nil {
+					parsedMessage.M3UA = m3uaMsg
+					fmt.Printf("Chunk %d: Parsed M3UA message, length: %d bytes\n", chunkIndex+1, LenM3UA)
+					if m3uaMsg.Data != nil && len(m3uaMsg.Data.Data) > 0 {
+						if isupMsg, LenISUP, err := isup.ParseISUP(m3uaMsg.Data.Data, m3uaMsg.Data.GetISUPFormat()); err == nil {
+							parsedMessage.ISUP = isupMsg
+							fmt.Printf("Chunk %d: Parsed ISUP message, length: %d bytes\n", chunkIndex+1, LenISUP)
+						}
 					}
+
 				}
 			}
-		}
 
-		allMessages = append(allMessages, parsedMessage)
-		successfulParses++
+			allMessages = append(allMessages, parsedMessage)
+			successfulParses++
+		}
 
 		if packetCount%100 == 0 {
 			fmt.Printf("Processed %d packets...\n", packetCount)
@@ -310,9 +287,11 @@ func main() {
 		if i >= 5 {
 			break
 		}
-		fmt.Printf("Packet %d: %s protocol, PPID: %d\n", msg.PacketNumber, msg.Protocol, msg.SCTPPPID)
+		fmt.Printf("Packet %d: %s protocol, PPID: %d, TSN: %d\n",
+			msg.PacketNumber, msg.Protocol, msg.SCTPPPID, msg.SCTPTSN)
 		if msg.MTP3 != nil {
-			fmt.Printf("  MTP3: OPC=%d, DPC=%d, SI=%d\n", msg.MTP3.RoutingLabel.OPC, msg.MTP3.RoutingLabel.DPC, msg.MTP3.ServiceIndicator)
+			fmt.Printf("  MTP3: OPC=%d, DPC=%d, SI=%d\n",
+				msg.MTP3.RoutingLabel.OPC, msg.MTP3.RoutingLabel.DPC, msg.MTP3.ServiceIndicator)
 		}
 		if msg.ISUP != nil {
 			fmt.Printf("  ISUP: Type=%d, CIC=%d\n", msg.ISUP.MessageType, msg.ISUP.CIC)
@@ -320,5 +299,6 @@ func main() {
 		if msg.Error != "" {
 			fmt.Printf("  Error: %s\n", msg.Error)
 		}
+		fmt.Println()
 	}
 }
