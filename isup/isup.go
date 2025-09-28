@@ -8,12 +8,12 @@ import (
 type ISUPMessage struct {
 	MessageType uint8  `json:"message_type"`
 	CIC         uint16 `json:"cic"`
-	Data        []byte `json:"data"`
+	Data        []byte `json:"data,omitempty"` // ISUP message body
 }
 
 // ParseISUP parses an ISUP message from bytes
 func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, uint32, error) {
-	
+
 	Len := uint32(len(data))
 
 	if Len < 3 {

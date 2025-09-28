@@ -22,13 +22,13 @@ type ProtocolData struct {
 	NetworkIndicator     uint8  `json:"network_indicator"`
 	MessagePriority      uint8  `json:"message_priority"`
 	SignalingLink        uint8  `json:"signaling_link"`
-	Data                 []byte `json:"data"` // Contains ISUP message
+	Data                 []byte `json:"-"` // Contains ISUP message
 }
 
 // M3UA Message
 type Message struct {
 	Header Header        `json:"header"`
-	Data   *ProtocolData `json:"protocol_data,omitempty"`
+	Data   *ProtocolData `json:"-"`
 }
 
 // Message type constants

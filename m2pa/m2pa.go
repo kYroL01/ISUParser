@@ -22,7 +22,7 @@ type Data struct {
 	Ununsed2 uint8  `json:"unused2"`
 	FSN      uint32 `json:"fsn"` // Forward Sequence Number
 	Priority uint8  `json:"priority"`
-	Data     []byte `json:"data"` // Contains MTP3 + ISUP message
+	Data     []byte `json:"-"` // MTP3 + ISUP
 }
 
 // Message type constants

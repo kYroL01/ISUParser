@@ -16,7 +16,7 @@ type Message struct {
 	ServiceIndicator uint8        `json:"service_indicator"`
 	NetworkIndicator uint8        `json:"network_indicator"`
 	RoutingLabel     RoutingLabel `json:"routing_label"`
-	Data             []byte       `json:"data"` // Contains ISUP message
+	Data             []byte       `json:"-"` // Contains ISUP message
 }
 
 // ISUP types

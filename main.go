@@ -47,7 +47,6 @@ type ParsedMessage struct {
 	M3UA            *m3ua.Message     `json:"m3ua,omitempty"`
 	MTP3            *mtp3.Message     `json:"mtp3,omitempty"`
 	ISUP            *isup.ISUPMessage `json:"isup,omitempty"`
-	RawPayload      []byte            `json:"raw_payload,omitempty"`
 	Error           string            `json:"error,omitempty"`
 }
 
@@ -204,7 +203,6 @@ func main() {
 				DestinationPort: dstPort,
 				SCTPTSN:         dataChunk.TSN,
 				SCTPPPID:        dataChunk.PPID,
-				RawPayload:      dataChunk.UserData,
 			}
 
 			// Parse based on protocol type (M2PA/M3UA logic here)
