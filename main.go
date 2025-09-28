@@ -146,6 +146,12 @@ func main() {
 	m2paCount := 0
 	m3uaCount := 0
 
+	// Create channel for JSON buffers
+	jsonBufferChan := make(chan []byte, 100) // Buffered channel
+
+	// Start a goroutine to process JSON buffers
+	go processJSONBuffers(jsonBufferChan)
+
 	// Iterate through packets
 	for packet := range packetSource.Packets() {
 		packetCount++
@@ -206,6 +212,7 @@ func main() {
 			}
 
 			// Parse based on protocol type (M2PA/M3UA logic here)
+			var jsonBuffer []byte
 			switch protocol {
 			case ProtocolM2PA:
 				m2paCount++
@@ -222,6 +229,8 @@ func main() {
 								if isupMsg, LenISUP, err := isup.ParseISUP(mtp3Msg.Data, mtp3Msg.GetISUPFormat()); err == nil {
 									parsedMessage.ISUP = isupMsg
 									fmt.Printf("Chunk %d: Parsed ISUP message, length: %d bytes\n", chunkIndex+1, LenISUP)
+									// Create JSON buffer for complete block
+									jsonBuffer = createJSONBuffer(parsedMessage)
 								}
 							}
 						}
@@ -236,10 +245,18 @@ func main() {
 						if isupMsg, LenISUP, err := isup.ParseISUP(m3uaMsg.Data.Data, m3uaMsg.Data.GetISUPFormat()); err == nil {
 							parsedMessage.ISUP = isupMsg
 							fmt.Printf("Chunk %d: Parsed ISUP message, length: %d bytes\n", chunkIndex+1, LenISUP)
+							// Create JSON buffer for complete block
+							jsonBuffer = createJSONBuffer(parsedMessage)
 						}
 					}
 
 				}
+			}
+
+			// Send JSON buffer through channel if we have a complete ISUP block
+			if jsonBuffer != nil {
+				jsonBufferChan <- jsonBuffer
+				successfulParses++
 			}
 
 			allMessages = append(allMessages, parsedMessage)
@@ -261,23 +278,10 @@ func main() {
 		return
 	}
 
-	// Convert to JSON
-	jsonData, err := json.MarshalIndent(allMessages, "", "  ")
-	if err != nil {
-		fmt.Printf("Error marshaling JSON: %v\n", err)
-		return
-	}
-
-	// Write to file
-	filename := "sigtran_analysis.json"
-	err = os.WriteFile(filename, jsonData, 0644)
-	if err != nil {
-		fmt.Printf("Error writing file: %v\n", err)
-		return
-	}
-
-	fmt.Printf("Successfully parsed and saved %d messages to %s\n",
-		successfulParses, filename)
+	// Close the JSON buffer channel and wait for processing to finish
+	close(jsonBufferChan)
+	time.Sleep(1 * time.Second) // Wait a moment for goroutine to finish
+	fmt.Printf("Processing complete. Sent %d JSON buffers\n", successfulParses)
 
 	// Print summary
 	fmt.Printf("\nSummary:\n")
@@ -299,4 +303,32 @@ func main() {
 		}
 		fmt.Println()
 	}
+}
+
+// Helper function to create JSON buffer
+func createJSONBuffer(message ParsedMessage) []byte {
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		fmt.Printf("Error creating JSON buffer: %v\n", err)
+		return nil
+	}
+	return jsonData
+}
+
+// Process JSON buffers from channel
+func processJSONBuffers(jsonBufferChan <-chan []byte) {
+	bufferCount := 0
+
+	for jsonBuffer := range jsonBufferChan {
+		bufferCount++
+
+		// Print JSON buffer
+		fmt.Printf("=== JSON Buffer #%d (%d bytes) ===\n", bufferCount, len(jsonBuffer))
+		fmt.Printf("%s\n", string(jsonBuffer))
+		fmt.Printf("=== End Buffer #%d ===\n\n", bufferCount)
+
+		// NOTE: here we can also write to file or send over network
+	}
+
+	fmt.Printf("Processed %d JSON buffers total\n", bufferCount)
 }
