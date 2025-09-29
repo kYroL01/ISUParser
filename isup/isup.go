@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// ISUP Message
+// ISUP Message ITU
 type ISUPMessage struct {
 	MessageType uint8  `json:"message_type"`
 	MessageName string `json:"message_name,omitempty"`
@@ -12,52 +12,22 @@ type ISUPMessage struct {
 	Data        []byte `json:"data,omitempty"` // ISUP message body
 }
 
-// ParseISUP parses an ISUP message from bytes
-func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, uint32, error) {
+// Parse ISUP ITU message
+func ParseISUP_ITU(data []byte) (*ISUPMessage, uint32, error) {
 
 	Len := uint32(len(data))
 
 	if Len < 3 {
-		return nil, 0, fmt.Errorf("ISUP message too short (%d bytes)", Len)
-	}
-
-	// Determine ISUP format (ITU-T or ANSI) based on context or configuration
-	if ISUPType != 2 && ISUPType != 5 {
-		return nil, Len, fmt.Errorf("unknown ISUP type: %d", ISUPType)
-	}
-
-	isANSIFormat := false
-	isITUFormat := false
-	switch ISUPType {
-	case 2:
-		isANSIFormat = true // Assume ANSI by default
-		fmt.Println("Parsing as ANSI ISUP")
-	case 5:
-		isITUFormat = true // Assume not ITU-T by default
-		fmt.Println("Parsing as ITU-T ISUP")
+		return nil, 0, fmt.Errorf("ISUP message ITU too short (%d bytes)", Len)
 	}
 
 	var cic uint16
+	// For ITU-T ISUP (12-bit CIC)
+	cicLow := data[0]         // CIC Low-Order Octet
+	cicHigh := data[1] & 0x0F // CIC High-Order 4 bits (lower 4 bits of byte)
+	cic = (uint16(cicHigh) << 8) | uint16(cicLow)
 
-	if isITUFormat {
-		fmt.Println("ITU-T ISUP parsing")
-		// For ITU-T ISUP (12-bit CIC)
-		cicLow := data[0]         // CIC Low-Order Octet
-		cicHigh := data[1] & 0x0F // CIC High-Order 4 bits (lower 4 bits of byte)
-		cic = (uint16(cicHigh) << 8) | uint16(cicLow)
-
-	} else if isANSIFormat {
-		fmt.Println("ANSI ISUP parsing")
-		// For ANSI ISUP (14-bit CIC)
-		cicLow := data[0]         // CIC Low-Order Octet
-		cicHigh := data[1] & 0x3F // CIC High-Order 6 bits (lower 6 bits of byte)
-		cic = (uint16(cicHigh) << 8) | uint16(cicLow)
-
-	} else {
-		return nil, Len, fmt.Errorf("unknown ISUP format")
-	}
-
-	fmt.Println("ISUP CIC:", cic)
+	fmt.Println("ISUP ITU CIC:", cic)
 
 	// Create ISUP message
 	ISUPmsg := &ISUPMessage{
@@ -66,11 +36,44 @@ func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, uint32, error) {
 		MessageName: GetISUPMessageTypeName(data[2]),
 	}
 
-	fmt.Println("ISUP Message Type:", ISUPmsg.MessageType, "(", ISUPmsg.MessageName, ")")
-	
+	fmt.Println("ISUP ITU Message Type:", ISUPmsg.MessageType, "(", ISUPmsg.MessageName, ")")
+
 	ISUPmsg.Data = data[3:]
 
 	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
+	return ISUPmsg, Len, nil
+}
+
+// Parse ISUP ANSI message
+func ParseISUP_ANSI(data []byte) (*ISUPMessage, uint32, error) {
+
+	Len := uint32(len(data))
+
+	if Len < 3 {
+		return nil, 0, fmt.Errorf("ISUP message ANSI too short (%d bytes)", Len)
+	}
+
+	var cic uint16
+	// For ANSI ISUP (14-bit CIC)
+	cicLow := data[0]         // CIC Low-Order Octet
+	cicHigh := data[1] & 0x3F // CIC High-Order 6 bits (lower 6 bits of byte)
+	cic = (uint16(cicHigh) << 8) | uint16(cicLow)
+
+	fmt.Println("ISUP ANSI CIC:", cic)
+
+	// Create ISUP message
+	ISUPmsg := &ISUPMessage{
+		CIC:         cic,
+		MessageType: data[2],
+		MessageName: GetISUPMessageTypeName(data[2]),
+	}
+
+	fmt.Println("ISUP ANSI Message Type:", ISUPmsg.MessageType, "(", ISUPmsg.MessageName, ")")
+
+	ISUPmsg.Data = data[3:]
+
+	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
+
 	return ISUPmsg, Len, nil
 }
 

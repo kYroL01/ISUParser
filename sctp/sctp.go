@@ -50,10 +50,9 @@ func ParseDataChunks(payload []byte) ([]DataChunk, error) {
 		}
 
 		chunkType := payload[offset]
-		chunkFlags := payload[offset+1]
 		chunkLength := binary.BigEndian.Uint16(payload[offset+2 : offset+4])
-
-		fmt.Println("Chunk Type:", chunkType, "Flags:", chunkFlags, "Length:", chunkLength)
+		//chunkFlags := payload[offset+1]
+		//fmt.Println("Chunk Type:", chunkType, "Flags:", chunkFlags, "Length:", chunkLength)
 
 		if chunkLength < 4 {
 			return nil, fmt.Errorf("invalid chunk length %d at offset %d", chunkLength, offset)

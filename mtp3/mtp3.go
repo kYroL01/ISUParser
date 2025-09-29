@@ -19,17 +19,11 @@ type Message struct {
 	Data             []byte       `json:"-"` // Contains ISUP message
 }
 
-// ISUP types
-const (
-	ITU  = 5
-	ANSI = 2
-)
+// Parse MTP3 ITU message
+func ParseMTP3_ITU(data []byte) (*Message, uint32, error) {
 
-// Parse MTP3 message from bytes
-func ParseMTP3(data []byte) (*Message, uint32, error) {
-	
 	Len := uint32(len(data))
-	
+
 	if Len < 5 {
 		return nil, 0, fmt.Errorf("MTP3 message too short (%d bytes)", Len)
 	}
@@ -68,14 +62,14 @@ func ParseMTP3(data []byte) (*Message, uint32, error) {
 	return mtp3, Len, nil
 }
 
-// GetISUPFormat returns the ISUP format based on Service Indicator
-func (m *Message) GetISUPFormat() uint8 {
-	switch m.ServiceIndicator {
-	case 5:
-		return ITU
-	case 2:
-		return ANSI
-	default:
-		return 0 // Unknown
+// Parse MTP3 ANSI message
+func ParseMTP3_ANSI(data []byte) (*Message, uint32, error) {
+
+	Len := uint32(len(data))
+
+	if Len < 8 {
+		return nil, 0, fmt.Errorf("MTP3 message too short (%d bytes)", Len)
 	}
+
+	return nil, 0, fmt.Errorf("MTP3 ANSI parsing not implemented")
 }
