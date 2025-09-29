@@ -7,6 +7,7 @@ import (
 // ISUP Message
 type ISUPMessage struct {
 	MessageType uint8  `json:"message_type"`
+	MessageName string `json:"message_name,omitempty"`
 	CIC         uint16 `json:"cic"`
 	Data        []byte `json:"data,omitempty"` // ISUP message body
 }
@@ -58,14 +59,15 @@ func ParseISUP(data []byte, ISUPType uint8) (*ISUPMessage, uint32, error) {
 
 	fmt.Println("ISUP CIC:", cic)
 
-	// Message type - 1 byte
+	// Create ISUP message
 	ISUPmsg := &ISUPMessage{
 		CIC:         cic,
 		MessageType: data[2],
+		MessageName: GetISUPMessageTypeName(data[2]),
 	}
 
-	fmt.Println("ISUP Message Type:", ISUPmsg.MessageType, "(", GetISUPMessageTypeName(ISUPmsg.MessageType), ")")
-
+	fmt.Println("ISUP Message Type:", ISUPmsg.MessageType, "(", ISUPmsg.MessageName, ")")
+	
 	ISUPmsg.Data = data[3:]
 
 	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
