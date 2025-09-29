@@ -13,12 +13,12 @@ type ISUPMessage struct {
 }
 
 // Parse ISUP ITU message
-func ParseISUP_ITU(data []byte) (*ISUPMessage, uint32, error) {
+func ParseISUP_ITU(data []byte) (*ISUPMessage, error) {
 
 	Len := uint32(len(data))
 
 	if Len < 3 {
-		return nil, 0, fmt.Errorf("ISUP message ITU too short (%d bytes)", Len)
+		return nil, fmt.Errorf("ISUP message ITU too short (%d bytes)", Len)
 	}
 
 	var cic uint16
@@ -41,16 +41,16 @@ func ParseISUP_ITU(data []byte) (*ISUPMessage, uint32, error) {
 	ISUPmsg.Data = data[3:]
 
 	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
-	return ISUPmsg, Len, nil
+	return ISUPmsg, nil
 }
 
 // Parse ISUP ANSI message
-func ParseISUP_ANSI(data []byte) (*ISUPMessage, uint32, error) {
+func ParseISUP_ANSI(data []byte) (*ISUPMessage, error) {
 
 	Len := uint32(len(data))
 
 	if Len < 3 {
-		return nil, 0, fmt.Errorf("ISUP message ANSI too short (%d bytes)", Len)
+		return nil, fmt.Errorf("ISUP message ANSI too short (%d bytes)", Len)
 	}
 
 	var cic uint16
@@ -74,7 +74,7 @@ func ParseISUP_ANSI(data []byte) (*ISUPMessage, uint32, error) {
 
 	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
 
-	return ISUPmsg, Len, nil
+	return ISUPmsg, nil
 }
 
 // ISUP message type constants

@@ -40,12 +40,12 @@ const (
 )
 
 // Parse M3UA message from bytes
-func ParseM3UA(data []byte) (*Message, uint32, error) {
+func ParseM3UA(data []byte) (*Message, error) {
 
 	Len := uint32(len(data))
 
 	if Len < 8 {
-		return nil, 0, fmt.Errorf("M3UA message too short (%d bytes)", Len)
+		return nil, fmt.Errorf("M3UA message too short (%d bytes)", Len)
 	}
 
 	header := Header{
@@ -83,7 +83,7 @@ func ParseM3UA(data []byte) (*Message, uint32, error) {
 
 	Len += 8 // Including header length
 
-	return msg, Len, nil
+	return msg, nil
 }
 
 // GetISUPFormat returns the ISUP format based on Service Indicator

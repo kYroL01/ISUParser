@@ -196,8 +196,8 @@ func main() {
 
 		// Process each DATA chunk in the packet
 		for chunkIndex, dataChunk := range dataChunks {
-			fmt.Printf("Processing chunk %d/%d: TSN=%d, PPID=%d, Data=%d bytes\n",
-				chunkIndex+1, len(dataChunks), dataChunk.TSN, dataChunk.PPID, len(dataChunk.UserData))
+			//fmt.Printf("Processing chunk %d/%d: TSN=%d, PPID=%d, Data=%d bytes\n",
+			//chunkIndex+1, len(dataChunks), dataChunk.TSN, dataChunk.PPID, len(dataChunk.UserData))
 
 			// Detect protocol for this chunk
 			protocol := detectProtocol(dataChunk.PPID, dataChunk.UserData)
@@ -224,22 +224,23 @@ func main() {
 			switch protocol {
 			case ProtocolM2PA:
 				m2paCount++
-				if m2paMsg, LenM2PA, err := m2pa.ParseM2PA(dataChunk.UserData); err == nil {
+				if m2paMsg, err := m2pa.ParseM2PA(dataChunk.UserData); err == nil {
 					parsedMessage.M2PA = m2paMsg
-					fmt.Printf("Chunk %d: Parsed M2PA message, length: %d bytes\n", chunkIndex+1, LenM2PA)
+					//fmt.Printf("Chunk %d: Parsed M2PA message, length: %d bytes\n", chunkIndex+1, LenM2PA)
 
 					if m2paMsg.IsUserData() && len(m2paMsg.Data) > 0 {
 
 						// ITU case
 						if isITU {
-							if mtp3Msg, LenMTP3, err := mtp3.ParseMTP3_ITU(m2paMsg.Data); err == nil {
+							if mtp3Msg, err := mtp3.ParseMTP3_ITU(m2paMsg.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
+								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
-									if isupMsg, LenISUP, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
+									if isupMsg, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -247,14 +248,15 @@ func main() {
 							}
 						} else if isANSI {
 							// ANSI case
-							if mtp3Msg, LenMTP3, err := mtp3.ParseMTP3_ANSI(m2paMsg.Data); err == nil {
+							if mtp3Msg, err := mtp3.ParseMTP3_ANSI(m2paMsg.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
+								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
-									if isupMsg, LenISUP, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
+									if isupMsg, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -265,22 +267,22 @@ func main() {
 				}
 			case ProtocolM3UA:
 				m3uaCount++
-				if m3uaMsg, LenM3UA, err := m3ua.ParseM3UA(dataChunk.UserData); err == nil {
+				if m3uaMsg, err := m3ua.ParseM3UA(dataChunk.UserData); err == nil {
 					parsedMessage.M3UA = m3uaMsg
-					fmt.Printf("Chunk %d: Parsed M3UA message, length: %d bytes\n", chunkIndex+1, LenM3UA)
+					//fmt.Printf("Chunk %d: Parsed M3UA message, length: %d bytes\n", chunkIndex+1, LenM3UA)
 
 					if m3uaMsg.Data != nil && len(m3uaMsg.Data.Data) > 0 {
 
 						// ITU case
 						if isITU {
-							if mtp3Msg, LenMTP3, err := mtp3.ParseMTP3_ITU(m3uaMsg.Data.Data); err == nil {
+							if mtp3Msg, err := mtp3.ParseMTP3_ITU(m3uaMsg.Data.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
+								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
-									if isupMsg, LenISUP, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
+									if isupMsg, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -288,14 +290,14 @@ func main() {
 							}
 						} else if isANSI {
 							// ANSI case
-							if mtp3Msg, LenMTP3, err := mtp3.ParseMTP3_ANSI(m3uaMsg.Data.Data); err == nil {
+							if mtp3Msg, err := mtp3.ParseMTP3_ANSI(m3uaMsg.Data.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
+								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
-									if isupMsg, LenISUP, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
+									if isupMsg, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}

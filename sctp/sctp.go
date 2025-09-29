@@ -85,8 +85,7 @@ func ParseDataChunks(payload []byte) ([]DataChunk, error) {
 
 					dataChunks = append(dataChunks, dataChunk)
 
-					fmt.Printf("DATA Chunk - TSN: %d, PPID: %d, UserData: %d bytes\n",
-						dataChunk.TSN, dataChunk.PPID, len(dataChunk.UserData))
+					//fmt.Printf("DATA Chunk - TSN: %d, PPID: %d, UserData: %d bytes\n", dataChunk.TSN, dataChunk.PPID, len(dataChunk.UserData))
 				}
 			}
 		}

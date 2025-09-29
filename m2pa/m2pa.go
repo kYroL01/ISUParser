@@ -32,12 +32,12 @@ const (
 )
 
 // Parse M2PA message from bytes
-func ParseM2PA(data []byte) (*Data, uint32, error) {
+func ParseM2PA(data []byte) (*Data, error) {
 
 	Len := uint32(len(data))
 
 	if Len < 16 {
-		return nil, 0, fmt.Errorf("M2PA message too short (%d bytes)", Len)
+		return nil, fmt.Errorf("M2PA message too short (%d bytes)", Len)
 	}
 
 	header := Header{
@@ -84,7 +84,7 @@ func ParseM2PA(data []byte) (*Data, uint32, error) {
 
 	// If length is exactly 16 bytes, there's no payload
 	if Len == 16 {
-		return msg, Len, nil
+		return msg, nil
 	}
 
 	// Parse Priority (1 byte)
@@ -98,7 +98,7 @@ func ParseM2PA(data []byte) (*Data, uint32, error) {
 		msg.Data = data[offset:]
 	}
 
-	return msg, Len, nil
+	return msg, nil
 }
 
 // IsUserData checks if this is a user data message
