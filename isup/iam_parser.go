@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// ParseIAMParameters parses IAM message parameters
+// ParseIAMParameters parses IAM message parameters to match C output format
 func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 	if len(data) < 3 {
 		return nil, fmt.Errorf("IAM message too short")
@@ -19,19 +19,19 @@ func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 		paramType := data[offset]
 		offset++
 
-		if paramType == 0 { // End of optional parameters
+		if paramType == ISUPEndOfOptionalParameters {
 			break
 		}
 
 		if offset >= len(data) {
-			break // No length byte
+			break
 		}
 
 		paramLength := int(data[offset])
 		offset++
 
 		if offset+paramLength > len(data) {
-			break // Incomplete parameter data
+			break
 		}
 
 		paramData := data[offset : offset+paramLength]
@@ -39,116 +39,150 @@ func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 
 		// Parse specific parameters
 		switch paramType {
-		case ParamNatureOfConnectionIndicators:
+		case ISUPNatureOfConnectionIndicators:
 			if len(paramData) >= 1 {
-				iam.NatureOfConnectionIndicators = parseNatureOfConnectionIndicators(paramData[0])
+				iam.NatureOfConnection = parseNatureOfConnection(paramData[0])
 			}
-		case ParamForwardCallIndicators:
+		case ISUPForwardCallIndicators:
 			if len(paramData) >= 2 {
-				iam.ForwardCallIndicators = parseForwardCallIndicators(paramData)
+				iam.ForwardCall = parseForwardCall(paramData)
 			}
-		case ParamCallingPartysCategory:
+		case ISUPCallingPartysCategory:
 			if len(paramData) >= 1 {
-				iam.CallingPartysCategory = parseCallingPartysCategory(paramData[0])
+				iam.CallingParty = parseCallingParty(paramData[0])
 			}
-		case ParamCalledPartyNumber:
-			iam.CalledPartyNumber = parseAddressField(paramData, format)
-		case ParamCallingPartyNumber:
-			iam.CallingPartyNumber = parseAddressField(paramData, format)
-		case ParamUserServiceInformation:
-			iam.UserServiceInformation = parseUserServiceInformation(paramData)
-		case ParamChargeNumber:
-			iam.ChargeNumber = parseAddressField(paramData, format)
-		case ParamOriginatingLineInformation:
+		case ISUPTransmissionMediumRequirement:
 			if len(paramData) >= 1 {
-				iam.OriginatingLineInformation = &OriginatingLineInformation{Value: paramData[0]}
+				iam.TransmissionMedium = parseTransmissionMedium(paramData[0])
 			}
-		case ParamGenericName:
-			iam.GenericName = parseGenericName(paramData)
-		case ParamHopCounter:
+		case ISUPCalledPartyNumber:
+			iam.CalledNumber = parseNumberInfo(paramData, false) // false for called number
+		case ISUPCallingPartyNumber:
+			iam.CallingNumber = parseNumberInfo(paramData, true) // true for calling number
+		case ISUPHopCounter:
 			if len(paramData) >= 1 {
-				iam.HopCounter = &HopCounter{Value: paramData[0]}
+				hopCounter := paramData[0]
+				iam.HopCounter = &hopCounter
 			}
-		case ParamGenericNumber:
-			iam.GenericNumber = parseAddressField(paramData, format)
-		case ParamJurisdiction:
-			iam.Jurisdiction = parseJurisdiction(paramData)
+		case ISUPGenericNumber:
+			iam.GenericNumber = parseNumberInfo(paramData, true)
+		case ISUPJurisdiction:
+			digits := parseJurisdictionDigits(paramData)
+			iam.Jurisdiction = &digits
+		case ISUPChargeNumber:
+			iam.ChargeNumber = parseNumberInfo(paramData, true)
 		}
-		// Add more parameter cases as needed
 	}
 
 	return iam, nil
 }
 
-// Individual parameter parsers
-func parseNatureOfConnectionIndicators(value uint8) *NatureOfConnectionIndicators {
-	return &NatureOfConnectionIndicators{
-		SatelliteIndicator:         satelliteIndicators[value&0x03],
-		ContinuityCheckIndicator:   continuityCheckIndicators[(value>>2)&0x03],
-		EchoControlDeviceIndicator: echoControlIndicators[(value>>4)&0x01],
-		RawValue:                   value,
+// Updated parser functions to match C format
+func parseNatureOfConnection(value uint8) *NatureOfConnection {
+	satellite := value & 0x03
+	continuityCheck := (value >> 2) & 0x03
+	echoDevice := (value >> 4) & 0x01
+
+	return &NatureOfConnection{
+		Satellite:           satellite,
+		SatelliteName:       satelliteIndicators[satellite],
+		ContinuityCheck:     continuityCheck,
+		ContinuityCheckName: continuityCheckIndicators[continuityCheck],
+		EchoDevice:          echoDevice,
+		EchoDeviceName:      echoControlIndicators[echoDevice],
 	}
 }
 
-func parseForwardCallIndicators(data []byte) *ForwardCallIndicators {
+func parseForwardCall(data []byte) *ForwardCall {
 	if len(data) < 2 {
 		return nil
 	}
 
 	byte1 := data[0]
 	byte2 := data[1]
-	value := uint16(byte1)<<8 | uint16(byte2)
 
-	return &ForwardCallIndicators{
-		NationalInternationalCallIndicator: nationalInternationalIndicators[byte1&0x01],
-		EndToEndMethodIndicator:            endToEndMethodIndicators[(byte1>>1)&0x03],
-		InterworkingIndicator:              boolToString((byte1>>3)&0x01, "No interworking encountered", "Interworking encountered"),
-		EndToEndInformationIndicator:       boolToString((byte1>>4)&0x01, "No end-to-end information available", "End-to-end information available"),
-		ISDNUserPartIndicator:              boolToString((byte1>>5)&0x01, "ISDN user part not used all the way", "ISDN user part used all the way"),
-		ISDNUserPartPreferenceIndicator:    isdnPreferenceIndicators[(byte1>>6)&0x03],
-		ISDNAccessIndicator:                boolToString(byte2&0x01, "Originating access non-ISDN", "Originating access ISDN"),
-		SCCPMethodIndicator:                sccpMethodIndicators[(byte2>>1)&0x03],
-		PortedNumberTranslationIndicator:   boolToString((byte2>>3)&0x01, "Number not translated", "Number translated"),
-		QueryOnReleaseAttemptIndicator:     boolToString((byte2>>4)&0x01, "No QoR routing attempt in progress", "QoR routing attempt in progress"),
-		RawValue:                           value,
+	return &ForwardCall{
+		NationalInternationalCall:     byte1 & 0x01,
+		NationalInternationalCallName: nationalInternationalIndicators[byte1&0x01],
+		EndToEndMethod:                (byte1 >> 1) & 0x03,
+		EndToEndMethodName:            endToEndMethodIndicators[(byte1>>1)&0x03],
+		Interworking:                  (byte1 >> 3) & 0x01,
+		InterworkingName:              interworkingIndicators[(byte1>>3)&0x01],
+		EndToEndInformation:           (byte1 >> 4) & 0x01,
+		EndToEndInformationName:       endToEndInformationIndicators[(byte1>>4)&0x01],
+		ISUP:                          (byte1 >> 5) & 0x01,
+		ISUPName:                      isdnUserPartIndicators[(byte1>>5)&0x01],
+		ISUPPreference:                (byte1 >> 6) & 0x03,
+		ISUPPreferenceName:            isdnPreferenceIndicators[(byte1>>6)&0x03],
+		ISDNAccess:                    byte2 & 0x01,
+		ISDNAccessName:                isdnAccessIndicators[byte2&0x01],
+		SCCPMethod:                    (byte2 >> 1) & 0x03,
+		SCCPMethodName:                sccpMethodIndicators[(byte2>>1)&0x03],
+		PortedNumber:                  (byte2 >> 3) & 0x01,
+		PortedNumberName:              portedNumberIndicators[(byte2>>3)&0x01],
+		QueryOnRelease:                (byte2 >> 4) & 0x01,
+		QueryOnReleaseName:            queryOnReleaseIndicators[(byte2>>4)&0x01],
 	}
 }
 
-func parseCallingPartysCategory(value uint8) *CallingPartysCategory {
-	return &CallingPartysCategory{
-		Value:    value,
-		Category: callingCategoryValues[value],
+func parseCallingParty(value uint8) *CallingParty {
+	return &CallingParty{
+		Num:  value,
+		Name: callingCategoryValues[value],
 	}
 }
 
-func parseAddressField(data []byte, format int) *AddressField {
+func parseTransmissionMedium(value uint8) *TransmissionMedium {
+	return &TransmissionMedium{
+		Num:  value,
+		Name: transmissionMediumValues[value],
+	}
+}
+
+func parseNumberInfo(data []byte, isCalling bool) *NumberInfo {
 	if len(data) < 1 {
 		return nil
 	}
 
-	addr := &AddressField{
-		RawBytes: data,
-	}
+	info := &NumberInfo{}
 
 	// Parse first byte
 	firstByte := data[0]
-	addr.OddEvenIndicator = boolToString((firstByte>>7)&0x01, "Even number of address signals", "Odd number of address signals")
-	addr.NatureOfAddressIndicator = natureOfAddressValues[firstByte&0x7F]
+	info.TON = firstByte & 0x7F
+	info.TONName = natureOfAddressValues[info.TON]
 
 	if len(data) > 1 {
 		secondByte := data[1]
-		addr.InternalNetworkNumber = innValues[(secondByte>>7)&0x01]
-		addr.NumberingPlanIndicator = numberingPlanValues[(secondByte>>4)&0x07]
-		addr.PresentationRestricted = presentationValues[(secondByte>>2)&0x03]
-		addr.ScreeningIndicator = screeningValues[secondByte&0x03]
+
+		if isCalling {
+			// For calling number
+			info.NI = (secondByte >> 7) & 0x01
+			info.NIName = niValues[info.NI]
+			info.NPI = (secondByte >> 4) & 0x07
+			info.NPIName = npiValues[info.NPI]
+			info.Restrict = (secondByte >> 2) & 0x03
+			info.RestrictName = restrictValues[info.Restrict]
+			info.Screened = secondByte & 0x03
+			info.ScreenedName = screenedValues[info.Screened]
+		} else {
+			// For called number
+			info.INN = (secondByte >> 7) & 0x01
+			info.INNName = innValues[info.INN]
+			info.NPI = (secondByte >> 4) & 0x07
+			info.NPIName = npiValues[info.NPI]
+		}
 	}
 
-	// Extract address digits (BCD encoded)
+	// Extract address digits
 	if len(data) > 2 {
-		addr.AddressDigits = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
+		info.Number = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
 	}
 
-	return addr
+	return info
+}
+
+func parseJurisdictionDigits(data []byte) string {
+	return decodeBCDAddress(data, false)
 }
 
 // Helper function to decode BCD address digits
@@ -175,5 +209,3 @@ func decodeBCDAddress(data []byte, odd bool) string {
 
 	return digits
 }
-
-// Add similar parsers for other parameter types...

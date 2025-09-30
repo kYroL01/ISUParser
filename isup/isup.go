@@ -4,49 +4,80 @@ import (
 	"fmt"
 )
 
-// IAM Specific Parameters
+// In isup/isup.go
+
+// Updated IAMParameters struct to match C output
 type IAMParameters struct {
-	NatureOfConnectionIndicators  *NatureOfConnectionIndicators  `json:"nature_of_connection_indicators,omitempty"`
-	ForwardCallIndicators         *ForwardCallIndicators         `json:"forward_call_indicators,omitempty"`
-	CallingPartysCategory         *CallingPartysCategory         `json:"calling_partys_category,omitempty"`
-	TransmissionMediumRequirement *TransmissionMediumRequirement `json:"transmission_medium_requirement,omitempty"`
-	CalledPartyNumber             *AddressField                  `json:"called_party_number,omitempty"`
-	CallingPartyNumber            *AddressField                  `json:"calling_party_number,omitempty"`
-	UserServiceInformation        *UserServiceInformation        `json:"user_service_information,omitempty"`
-	ChargeNumber                  *AddressField                  `json:"charge_number,omitempty"`
-	OriginatingLineInformation    *OriginatingLineInformation    `json:"originating_line_information,omitempty"`
-	GenericName                   *GenericName                   `json:"generic_name,omitempty"`
-	HopCounter                    *HopCounter                    `json:"hop_counter,omitempty"`
-	GenericNumber                 *AddressField                  `json:"generic_number,omitempty"`
-	Jurisdiction                  *Jurisdiction                  `json:"jurisdiction,omitempty"`
-	// Add more parameters as needed
+	NatureOfConnection *NatureOfConnection `json:"nature_of_connection,omitempty"`
+	ForwardCall        *ForwardCall        `json:"forward_call,omitempty"`
+	CallingParty       *CallingParty       `json:"calling_party,omitempty"`
+	TransmissionMedium *TransmissionMedium `json:"transmission_medium,omitempty"`
+	CalledNumber       *NumberInfo         `json:"called_number,omitempty"`
+	CallingNumber      *NumberInfo         `json:"calling_number,omitempty"`
+	HopCounter         *uint8              `json:"hop_counter,omitempty"`
+	GenericNumber      *NumberInfo         `json:"generic_number,omitempty"`
+	Jurisdiction       *string             `json:"jurisdiction,omitempty"`
+	ChargeNumber       *NumberInfo         `json:"charge_number,omitempty"`
+	// Add other fields as needed
 }
 
-// Parameter Structures
-type NatureOfConnectionIndicators struct {
-	SatelliteIndicator         string `json:"satellite_indicator"`
-	ContinuityCheckIndicator   string `json:"continuity_check_indicator"`
-	EchoControlDeviceIndicator string `json:"echo_control_device_indicator"`
-	RawValue                   uint8  `json:"raw_value"`
+// Updated parameter structures to match C JSON format
+type NatureOfConnection struct {
+	Satellite           uint8  `json:"satellite"`
+	SatelliteName       string `json:"satellite_name"`
+	ContinuityCheck     uint8  `json:"continuity_check"`
+	ContinuityCheckName string `json:"continuity_check_name"`
+	EchoDevice          uint8  `json:"echo_device"`
+	EchoDeviceName      string `json:"echo_device_name"`
 }
 
-type ForwardCallIndicators struct {
-	NationalInternationalCallIndicator string `json:"national_international_call_indicator"`
-	EndToEndMethodIndicator            string `json:"end_to_end_method_indicator"`
-	InterworkingIndicator              string `json:"interworking_indicator"`
-	EndToEndInformationIndicator       string `json:"end_to_end_information_indicator"`
-	ISDNUserPartIndicator              string `json:"isdn_user_part_indicator"`
-	ISDNUserPartPreferenceIndicator    string `json:"isdn_user_part_preference_indicator"`
-	ISDNAccessIndicator                string `json:"isdn_access_indicator"`
-	SCCPMethodIndicator                string `json:"sccp_method_indicator"`
-	PortedNumberTranslationIndicator   string `json:"ported_number_translation_indicator"`
-	QueryOnReleaseAttemptIndicator     string `json:"query_on_release_attempt_indicator"`
-	RawValue                           uint16 `json:"raw_value"`
+type ForwardCall struct {
+	NationalInternationalCall     uint8  `json:"national_international_call"`
+	NationalInternationalCallName string `json:"national_international_call_name"`
+	EndToEndMethod                uint8  `json:"end_to_end_method"`
+	EndToEndMethodName            string `json:"end_to_end_method_name"`
+	Interworking                  uint8  `json:"interworking"`
+	InterworkingName              string `json:"interworking_name"`
+	EndToEndInformation           uint8  `json:"end_to_end_information"`
+	EndToEndInformationName       string `json:"end_to_end_information_name"`
+	ISUP                          uint8  `json:"isup"`
+	ISUPName                      string `json:"isup_name"`
+	ISUPPreference                uint8  `json:"isup_preference"`
+	ISUPPreferenceName            string `json:"isup_preference_name"`
+	ISDNAccess                    uint8  `json:"isdn_access"`
+	ISDNAccessName                string `json:"isdn_access_name"`
+	SCCPMethod                    uint8  `json:"sccp_method"`
+	SCCPMethodName                string `json:"sccp_method_name"`
+	PortedNumber                  uint8  `json:"ported_number"`
+	PortedNumberName              string `json:"ported_number_name"`
+	QueryOnRelease                uint8  `json:"query_on_release"`
+	QueryOnReleaseName            string `json:"query_on_release_name"`
 }
 
-type CallingPartysCategory struct {
-	Value    uint8  `json:"value"`
-	Category string `json:"category"`
+type CallingParty struct {
+	Num  uint8  `json:"num"`
+	Name string `json:"name"`
+}
+
+type TransmissionMedium struct {
+	Num  uint8  `json:"num"`
+	Name string `json:"name"`
+}
+
+type NumberInfo struct {
+	INN          uint8  `json:"inn,omitempty"`
+	INNName      string `json:"inn_name,omitempty"`
+	TON          uint8  `json:"ton,omitempty"`
+	TONName      string `json:"ton_name,omitempty"`
+	NPI          uint8  `json:"npi,omitempty"`
+	NPIName      string `json:"npi_name,omitempty"`
+	NI           uint8  `json:"ni,omitempty"`
+	NIName       string `json:"ni_name,omitempty"`
+	Restrict     uint8  `json:"restrict,omitempty"`
+	RestrictName string `json:"restrict_name,omitempty"`
+	Screened     uint8  `json:"screened,omitempty"`
+	ScreenedName string `json:"screened_name,omitempty"`
+	Number       string `json:"num,omitempty"`
 }
 
 type UserServiceInformation struct {
@@ -285,17 +316,17 @@ var ISUPMessageTypeNames = map[uint8]string{
 	ISUPMessageTypeLPA:  "LPA (Loopback Acknowledgment)",
 	ISUPMessageTypeCSVQ: "CSVQ (CUG Selection and Validation Request)",
 	ISUPMessageTypeCSVR: "CSVR (CUG Selection and Validation Response)",
-	ISUPMessageTypeDRS:  "DRS (Delayed Release)", // ADDED
-	ISUPMessageTypePAM:  "PAM (Pass Along)",      // ADDED
+	ISUPMessageTypeDRS:  "DRS (Delayed Release)", 
+	ISUPMessageTypePAM:  "PAM (Pass Along)",      
 	ISUPMessageTypeGRA:  "GRA (Circuit Group Reset Acknowledgment)",
-	ISUPMessageTypeCQM:  "CQM (Circuit Group Query)", // ADDED
+	ISUPMessageTypeCQM:  "CQM (Circuit Group Query)", 
 	ISUPMessageTypeCQR:  "CQR (Circuit Group Query Request)",
 	ISUPMessageTypeCPG:  "CPG (Call Progress)",
 	ISUPMessageTypeUSR:  "USR (User-to-User Information)",
 	ISUPMessageTypeUCIC: "UCIC (Unequipped Circuit Identification Code)",
 	ISUPMessageTypeCFN:  "CFN (Confusion)",
 	ISUPMessageTypeOLM:  "OLM (Overload)",
-	ISUPMessageTypeCRG:  "CRG (Charge information)", // ADDED
+	ISUPMessageTypeCRG:  "CRG (Charge information)", 
 	ISUPMessageTypeNRM:  "NRM (Network Resource Management)",
 	ISUPMessageTypeFAC:  "FAC (Facility)",
 	ISUPMessageTypeUPT:  "UPT (User Part Test)",

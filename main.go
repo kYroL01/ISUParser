@@ -241,15 +241,7 @@ func main() {
 
 										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
 											fmt.Printf("IAM Parameters:\n")
-											if isupMsg.IAM.CalledPartyNumber != nil {
-												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.CallingPartyNumber != nil {
-												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.ChargeNumber != nil {
-												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
-											}
+
 										}
 
 										// Create JSON buffer for complete block
@@ -267,16 +259,7 @@ func main() {
 										parsedMessage.ISUP = isupMsg
 
 										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
-											fmt.Printf("IAM Parameters:\n")
-											if isupMsg.IAM.CalledPartyNumber != nil {
-												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.CallingPartyNumber != nil {
-												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.ChargeNumber != nil {
-												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
-											}
+
 										}
 
 										// Create JSON buffer for complete block
@@ -305,15 +288,7 @@ func main() {
 
 										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
 											fmt.Printf("IAM Parameters:\n")
-											if isupMsg.IAM.CalledPartyNumber != nil {
-												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.CallingPartyNumber != nil {
-												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.ChargeNumber != nil {
-												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
-											}
+
 										}
 
 										// Create JSON buffer for complete block
@@ -331,15 +306,7 @@ func main() {
 										parsedMessage.ISUP = isupMsg
 										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
 											fmt.Printf("IAM Parameters:\n")
-											if isupMsg.IAM.CalledPartyNumber != nil {
-												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.CallingPartyNumber != nil {
-												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
-											}
-											if isupMsg.IAM.ChargeNumber != nil {
-												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
-											}
+
 										}
 
 										// Create JSON buffer for complete block
