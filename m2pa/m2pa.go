@@ -8,7 +8,7 @@ import (
 // M2PA Message Header (RFC 4165)
 type Header struct {
 	Version       uint8  `json:"version"`
-	Spare         uint8  `json:"spare"`
+	Spare         uint8  `json:"-"`
 	MessageClass  uint8  `json:"message_class"`
 	MessageType   uint8  `json:"message_type"`
 	MessageLength uint32 `json:"message_length"`
@@ -17,9 +17,9 @@ type Header struct {
 // M2PA Data Message
 type Data struct {
 	Header   Header `json:"header"`
-	Ununsed1 uint8  `json:"unused1"`
+	Ununsed1 uint8  `json:"-"`
 	BSN      uint32 `json:"bsn"` // Backward Sequence Number
-	Ununsed2 uint8  `json:"unused2"`
+	Ununsed2 uint8  `json:"-"`
 	FSN      uint32 `json:"fsn"` // Forward Sequence Number
 	Priority uint8  `json:"priority"`
 	Data     []byte `json:"-"` // MTP3 + ISUP

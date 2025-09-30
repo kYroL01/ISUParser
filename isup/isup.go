@@ -4,12 +4,102 @@ import (
 	"fmt"
 )
 
-// ISUP Message ITU
+// IAM Specific Parameters
+type IAMParameters struct {
+	NatureOfConnectionIndicators  *NatureOfConnectionIndicators  `json:"nature_of_connection_indicators,omitempty"`
+	ForwardCallIndicators         *ForwardCallIndicators         `json:"forward_call_indicators,omitempty"`
+	CallingPartysCategory         *CallingPartysCategory         `json:"calling_partys_category,omitempty"`
+	TransmissionMediumRequirement *TransmissionMediumRequirement `json:"transmission_medium_requirement,omitempty"`
+	CalledPartyNumber             *AddressField                  `json:"called_party_number,omitempty"`
+	CallingPartyNumber            *AddressField                  `json:"calling_party_number,omitempty"`
+	UserServiceInformation        *UserServiceInformation        `json:"user_service_information,omitempty"`
+	ChargeNumber                  *AddressField                  `json:"charge_number,omitempty"`
+	OriginatingLineInformation    *OriginatingLineInformation    `json:"originating_line_information,omitempty"`
+	GenericName                   *GenericName                   `json:"generic_name,omitempty"`
+	HopCounter                    *HopCounter                    `json:"hop_counter,omitempty"`
+	GenericNumber                 *AddressField                  `json:"generic_number,omitempty"`
+	Jurisdiction                  *Jurisdiction                  `json:"jurisdiction,omitempty"`
+	// Add more parameters as needed
+}
+
+// Parameter Structures
+type NatureOfConnectionIndicators struct {
+	SatelliteIndicator         string `json:"satellite_indicator"`
+	ContinuityCheckIndicator   string `json:"continuity_check_indicator"`
+	EchoControlDeviceIndicator string `json:"echo_control_device_indicator"`
+	RawValue                   uint8  `json:"raw_value"`
+}
+
+type ForwardCallIndicators struct {
+	NationalInternationalCallIndicator string `json:"national_international_call_indicator"`
+	EndToEndMethodIndicator            string `json:"end_to_end_method_indicator"`
+	InterworkingIndicator              string `json:"interworking_indicator"`
+	EndToEndInformationIndicator       string `json:"end_to_end_information_indicator"`
+	ISDNUserPartIndicator              string `json:"isdn_user_part_indicator"`
+	ISDNUserPartPreferenceIndicator    string `json:"isdn_user_part_preference_indicator"`
+	ISDNAccessIndicator                string `json:"isdn_access_indicator"`
+	SCCPMethodIndicator                string `json:"sccp_method_indicator"`
+	PortedNumberTranslationIndicator   string `json:"ported_number_translation_indicator"`
+	QueryOnReleaseAttemptIndicator     string `json:"query_on_release_attempt_indicator"`
+	RawValue                           uint16 `json:"raw_value"`
+}
+
+type CallingPartysCategory struct {
+	Value    uint8  `json:"value"`
+	Category string `json:"category"`
+}
+
+type UserServiceInformation struct {
+	CodingStandard                string `json:"coding_standard"`
+	InformationTransferCapability string `json:"information_transfer_capability"`
+	TransferMode                  string `json:"transfer_mode"`
+	InformationTransferRate       string `json:"information_transfer_rate"`
+	UserInfoLayer1Protocol        string `json:"user_info_layer1_protocol"`
+	RawBytes                      []byte `json:"-"`
+}
+
+type TransmissionMediumRequirement struct {
+	Value  uint8  `json:"value"`
+	Medium string `json:"medium"`
+}
+
+type AddressField struct {
+	OddEvenIndicator         string `json:"odd_even_indicator"`
+	NatureOfAddressIndicator string `json:"nature_of_address_indicator"`
+	InternalNetworkNumber    string `json:"internal_network_number"`
+	NumberingPlanIndicator   string `json:"numbering_plan_indicator"`
+	PresentationRestricted   string `json:"presentation_restricted"`
+	ScreeningIndicator       string `json:"screening_indicator"`
+	AddressDigits            string `json:"address_digits"`
+	RawBytes                 []byte `json:"-"`
+}
+
+type OriginatingLineInformation struct {
+	Value uint8 `json:"value"`
+}
+
+type GenericName struct {
+	PresentationIndicator string `json:"presentation_indicator"`
+	AvailabilityIndicator string `json:"availability_indicator"`
+	TypeIndicator         string `json:"type_indicator"`
+	Name                  string `json:"name"`
+}
+
+type HopCounter struct {
+	Value uint8 `json:"value"`
+}
+
+type Jurisdiction struct {
+	Digits string `json:"digits"`
+}
+
+// ISUP Message
 type ISUPMessage struct {
-	MessageType uint8  `json:"message_type"`
-	MessageName string `json:"message_name,omitempty"`
-	CIC         uint16 `json:"cic"`
-	Data        []byte `json:"data,omitempty"` // ISUP message body
+	MessageType uint8          `json:"message_type"`
+	MessageName string         `json:"message_name,omitempty"`
+	CIC         uint16         `json:"cic"`
+	Data        []byte         `json:"data,omitempty"` // ISUP message body
+	IAM         *IAMParameters `json:"iam,omitempty"`  // IAM-specific parameters
 }
 
 // Parse ISUP ITU message
@@ -41,6 +131,15 @@ func ParseISUP_ITU(data []byte) (*ISUPMessage, error) {
 	ISUPmsg.Data = data[3:]
 
 	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
+
+	// Parse IAM-specific parameters if message type is IAM
+	if ISUPmsg.MessageType == ISUPMessageTypeIAM {
+		iamParams, err := ParseIAMParameters(ISUPmsg.Data, 0) // Assuming format 0 for ITU
+		if err == nil {
+			ISUPmsg.IAM = iamParams
+		}
+	}
+
 	return ISUPmsg, nil
 }
 
@@ -73,6 +172,14 @@ func ParseISUP_ANSI(data []byte) (*ISUPMessage, error) {
 	ISUPmsg.Data = data[3:]
 
 	Len += 3 // CIC (2 bytes) + Message Type (1 byte)
+
+	// Parse IAM-specific parameters if message type is IAM
+	if ISUPmsg.MessageType == ISUPMessageTypeIAM {
+		iamParams, err := ParseIAMParameters(ISUPmsg.Data, 1) // Assuming format 1 for ANSI
+		if err == nil {
+			ISUPmsg.IAM = iamParams
+		}
+	}
 
 	return ISUPmsg, nil
 }

@@ -234,12 +234,23 @@ func main() {
 						if isITU {
 							if mtp3Msg, err := mtp3.ParseMTP3_ITU(m2paMsg.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+
+										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
+											fmt.Printf("IAM Parameters:\n")
+											if isupMsg.IAM.CalledPartyNumber != nil {
+												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.CallingPartyNumber != nil {
+												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.ChargeNumber != nil {
+												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
+											}
+										}
 
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
@@ -250,12 +261,23 @@ func main() {
 							// ANSI case
 							if mtp3Msg, err := mtp3.ParseMTP3_ANSI(m2paMsg.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+
+										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
+											fmt.Printf("IAM Parameters:\n")
+											if isupMsg.IAM.CalledPartyNumber != nil {
+												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.CallingPartyNumber != nil {
+												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.ChargeNumber != nil {
+												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
+											}
+										}
 
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
@@ -269,7 +291,6 @@ func main() {
 				m3uaCount++
 				if m3uaMsg, err := m3ua.ParseM3UA(dataChunk.UserData); err == nil {
 					parsedMessage.M3UA = m3uaMsg
-					//fmt.Printf("Chunk %d: Parsed M3UA message, length: %d bytes\n", chunkIndex+1, LenM3UA)
 
 					if m3uaMsg.Data != nil && len(m3uaMsg.Data.Data) > 0 {
 
@@ -277,12 +298,24 @@ func main() {
 						if isITU {
 							if mtp3Msg, err := mtp3.ParseMTP3_ITU(m3uaMsg.Data.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+
+										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
+											fmt.Printf("IAM Parameters:\n")
+											if isupMsg.IAM.CalledPartyNumber != nil {
+												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.CallingPartyNumber != nil {
+												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.ChargeNumber != nil {
+												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
+											}
+										}
+
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -292,12 +325,23 @@ func main() {
 							// ANSI case
 							if mtp3Msg, err := mtp3.ParseMTP3_ANSI(m3uaMsg.Data.Data); err == nil {
 								parsedMessage.MTP3 = mtp3Msg
-								//fmt.Printf("Chunk %d: Parsed MTP3 ITU message, length: %d bytes\n", chunkIndex+1, LenMTP3)
 
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										//fmt.Printf("Chunk %d: Parsed ISUP ITU message, length: %d bytes\n", chunkIndex+1, LenISUP)
+										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
+											fmt.Printf("IAM Parameters:\n")
+											if isupMsg.IAM.CalledPartyNumber != nil {
+												fmt.Printf("  Called Party: %s\n", isupMsg.IAM.CalledPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.CallingPartyNumber != nil {
+												fmt.Printf("  Calling Party: %s\n", isupMsg.IAM.CallingPartyNumber.AddressDigits)
+											}
+											if isupMsg.IAM.ChargeNumber != nil {
+												fmt.Printf("  Charge Number: %s\n", isupMsg.IAM.ChargeNumber.AddressDigits)
+											}
+										}
+
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}

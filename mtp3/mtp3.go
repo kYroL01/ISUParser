@@ -17,8 +17,8 @@ type RoutingLabel struct {
 	DPC                   uint32         `json:"dpc"`
 	OPC                   uint32         `json:"opc"`
 	SignalingLinkSelector uint8          `json:"signaling_link_selector"`
-	DPC_ANSI              *ANSIPointCode `json:"pcs_dpc,omitempty"`
-	OPC_ANSI              *ANSIPointCode `json:"pcs_opc,omitempty"`
+	DPC_ANSI              *ANSIPointCode `json:"pcs_dpc"`
+	OPC_ANSI              *ANSIPointCode `json:"pcs_opc"`
 }
 
 // MTP3 Message
