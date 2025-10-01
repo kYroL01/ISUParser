@@ -8,16 +8,17 @@ import (
 
 // Updated IAMParameters struct to match C output
 type IAMParameters struct {
-	NatureOfConnection *NatureOfConnection `json:"nature_of_connection,omitempty"`
-	ForwardCall        *ForwardCall        `json:"forward_call,omitempty"`
-	TransmissionMedium *TransmissionMedium `json:"transmission_medium,omitempty"`
-	CallingParty       *CallingParty       `json:"calling_party,omitempty"`
-	CallingNumber      *NumberInfo         `json:"calling_number,omitempty"`
-	CalledNumber       *NumberInfo         `json:"called_number,omitempty"`
-	ChargeNumber       *NumberInfo         `json:"charge_number,omitempty"`
-	HopCounter         *uint8              `json:"hop_counter,omitempty"`
-	GenericNumber      *NumberInfo         `json:"generic_number,omitempty"`
-	Jurisdiction       *string             `json:"jurisdiction,omitempty"`
+	NatureOfConnection     *NatureOfConnection     `json:"nature_of_connection,omitempty"`
+	ForwardCall            *ForwardCall            `json:"forward_call,omitempty"`
+	TransmissionMedium     *TransmissionMedium     `json:"transmission_medium,omitempty"`
+	UserServiceInformation *UserServiceInformation `json:"user_service_information,omitempty"`
+	CallingPartyCategory   *CallingPartyCat        `json:"calling_party_category,omitempty"`
+	CallingNumber          *NumberInfoCalling      `json:"calling_number,omitempty"`
+	CalledNumber           *NumberInfoCalled       `json:"called_number,omitempty"`
+	ChargeNumber           *NumberInfoCharge       `json:"charge_number,omitempty"`
+	HopCounter             *uint8                  `json:"hop_counter,omitempty"`
+	GenericNumber          *NumberInfoCalling      `json:"generic_number,omitempty"`
+	Jurisdiction           *string                 `json:"jurisdiction,omitempty"`
 	// Add other fields as needed
 }
 
@@ -54,25 +55,41 @@ type ForwardCall struct {
 	QueryOnReleaseName            string `json:"query_on_release_name"`
 }
 
-type CallingParty struct {
+type CallingPartyCat struct {
 	Num  uint8  `json:"num"`
 	Name string `json:"name"`
 }
 
-type NumberInfo struct {
-	INN          uint8  `json:"inn,omitempty"`
-	INNName      string `json:"inn_name,omitempty"`
-	TON          uint8  `json:"ton,omitempty"`
-	TONName      string `json:"ton_name,omitempty"`
-	NPI          uint8  `json:"npi,omitempty"`
-	NPIName      string `json:"npi_name,omitempty"`
-	NI           uint8  `json:"ni,omitempty"`
-	NIName       string `json:"ni_name,omitempty"`
-	Restrict     uint8  `json:"restrict,omitempty"`
-	RestrictName string `json:"restrict_name,omitempty"`
-	Screened     uint8  `json:"screened,omitempty"`
-	ScreenedName string `json:"screened_name,omitempty"`
-	Number       string `json:"num,omitempty"`
+type NumberInfoCalling struct {
+	TON          uint8  `json:"ton"`
+	TONName      string `json:"ton_name"`
+	NPI          uint8  `json:"npi"`
+	NPIName      string `json:"npi_name"`
+	NI           uint8  `json:"ni"`
+	NIName       string `json:"ni_name"`
+	Restrict     uint8  `json:"restrict"`
+	RestrictName string `json:"restrict_name"`
+	Screened     uint8  `json:"screened"`
+	ScreenedName string `json:"screened_name"`
+	Number       string `json:"num"`
+}
+
+type NumberInfoCalled struct {
+	INN     uint8  `json:"inn"`
+	INNName string `json:"inn_name"`
+	TON     uint8  `json:"ton"`
+	TONName string `json:"ton_name"`
+	NPI     uint8  `json:"npi"`
+	NPIName string `json:"npi_name"`
+	Number  string `json:"num"`
+}
+
+type NumberInfoCharge struct {
+	TON     uint8  `json:"ton"`
+	TONName string `json:"ton_name"`
+	NPI     uint8  `json:"npi"`
+	NPIName string `json:"npi_name"`
+	Number  string `json:"num"`
 }
 
 type TransmissionMedium struct {
@@ -81,12 +98,12 @@ type TransmissionMedium struct {
 }
 
 type UserServiceInformation struct {
-	CodingStandard                string `json:"coding_standard"`
-	InformationTransferCapability string `json:"information_transfer_capability"`
-	TransferMode                  string `json:"transfer_mode"`
-	InformationTransferRate       string `json:"information_transfer_rate"`
-	UserInfoLayer1Protocol        string `json:"user_info_layer1_protocol"`
-	RawBytes                      []byte `json:"-"`
+	CodingStandard         string `json:"coding_standard"`
+	InfoTransferCapability string `json:"information_transfer_capability"`
+	TransferMode           string `json:"transfer_mode"`
+	InfoTransferRate       string `json:"information_transfer_rate"`
+	Layer1ID               uint8  `json:"layer1_id"`
+	UserInfoLayer1Protocol string `json:"user_info_layer1_protocol"`
 }
 
 type TransmissionMediumRequirement struct {

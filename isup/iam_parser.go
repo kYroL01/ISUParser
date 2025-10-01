@@ -5,9 +5,12 @@ import (
 	"fmt"
 )
 
-// ParseIAMParameters parses IAM message parameters to match C output format
+// Parse IAM message parameters
 func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
-	if len(data) < 3 {
+
+	IAMSize := len(data)
+
+	if IAMSize < 3 {
 		return nil, fmt.Errorf("IAM message too short")
 	}
 
@@ -15,7 +18,7 @@ func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 	offset := 0
 
 	// Parse parameters sequentially
-	for offset < len(data) {
+	for offset < IAMSize {
 		paramType := data[offset]
 		offset++
 
@@ -23,14 +26,14 @@ func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 			break
 		}
 
-		if offset >= len(data) {
+		if offset >= IAMSize {
 			break
 		}
 
 		paramLength := int(data[offset])
 		offset++
 
-		if offset+paramLength > len(data) {
+		if offset+paramLength > IAMSize {
 			break
 		}
 
@@ -49,35 +52,36 @@ func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 			}
 		case ISUPCallingPartysCategory:
 			if len(paramData) >= 1 {
-				iam.CallingParty = parseCallingParty(paramData[0])
+				iam.CallingPartyCategory = parseCallingPartyCat(paramData[0])
 			}
 		case ISUPTransmissionMediumRequirement:
 			if len(paramData) >= 1 {
 				iam.TransmissionMedium = parseTransmissionMedium(paramData[0])
 			}
+		case ISUPUserServiceInformation:
+			iam.UserServiceInformation = parseUserServiceInformation(paramData)
 		case ISUPCalledPartyNumber:
-			iam.CalledNumber = parseNumberInfo(paramData, false) // false for called number
+			iam.CalledNumber = parseNumberInfoCalled(paramData) // false for called number
 		case ISUPCallingPartyNumber:
-			iam.CallingNumber = parseNumberInfo(paramData, true) // true for calling number
+			iam.CallingNumber = parseNumberInfoCalling(paramData) // true for calling number
 		case ISUPHopCounter:
 			if len(paramData) >= 1 {
 				hopCounter := paramData[0]
 				iam.HopCounter = &hopCounter
 			}
 		case ISUPGenericNumber:
-			iam.GenericNumber = parseNumberInfo(paramData, true)
+			iam.GenericNumber = parseNumberInfoCalling(paramData)
 		case ISUPJurisdiction:
 			digits := parseJurisdictionDigits(paramData)
 			iam.Jurisdiction = &digits
 		case ISUPChargeNumber:
-			iam.ChargeNumber = parseNumberInfo(paramData, true)
+			iam.ChargeNumber = parseNumberInfoCharge(paramData)
 		}
 	}
 
 	return iam, nil
 }
 
-// Updated parser functions to match C format
 func parseNatureOfConnection(value uint8) *NatureOfConnection {
 	satellite := value & 0x03
 	continuityCheck := (value >> 2) & 0x03
@@ -125,8 +129,8 @@ func parseForwardCall(data []byte) *ForwardCall {
 	}
 }
 
-func parseCallingParty(value uint8) *CallingParty {
-	return &CallingParty{
+func parseCallingPartyCat(value uint8) *CallingPartyCat {
+	return &CallingPartyCat{
 		Num:  value,
 		Name: callingCategoryValues[value],
 	}
@@ -139,12 +143,50 @@ func parseTransmissionMedium(value uint8) *TransmissionMedium {
 	}
 }
 
-func parseNumberInfo(data []byte, isCalling bool) *NumberInfo {
+func parseUserServiceInformation(data []byte) *UserServiceInformation {
+
+	Len := len(data)
+
+	if Len < 3 {
+		return nil
+	}
+
+	info := &UserServiceInformation{}
+
+	cs := (data[0] & 0x60) >> 5
+	info.CodingStandard = CodingStandardValues[cs]
+	itc := data[0] & 0x1F
+	info.InfoTransferCapability = TransferCapabilityValues[itc]
+	tm := (data[1] & 0x60) >> 5
+	info.TransferMode = TransferModeValues[tm]
+	tr := data[1] & 0x1F
+	info.InfoTransferRate = TransferRateValues[tr]
+
+	var octet uint8
+	if tr == 0x18 { // If rate is 64 kbps
+		if Len >= 4 {
+			ulp := data[2] & 0x7F
+			info.UserInfoLayer1Protocol = UserInfoLayer1Values[ulp]
+			octet = data[3]
+		}
+	} else {
+		octet = data[2]
+	}
+
+	layer1ID := (octet & 0x60) >> 5
+	info.Layer1ID = layer1ID
+	layer1Proto := octet & 0x1F
+	info.UserInfoLayer1Protocol = UserInfoLayer1Values[layer1Proto]
+
+	return info
+}
+
+func parseNumberInfoCalling(data []byte) *NumberInfoCalling {
 	if len(data) < 1 {
 		return nil
 	}
 
-	info := &NumberInfo{}
+	info := &NumberInfoCalling{}
 
 	// Parse first byte
 	firstByte := data[0]
@@ -153,24 +195,71 @@ func parseNumberInfo(data []byte, isCalling bool) *NumberInfo {
 
 	if len(data) > 1 {
 		secondByte := data[1]
+		// For calling number
+		info.NI = (secondByte >> 7) & 0x01
+		info.NIName = niValues[info.NI]
+		info.NPI = (secondByte >> 4) & 0x07
+		info.NPIName = npiValues[info.NPI]
+		info.Restrict = (secondByte >> 2) & 0x03
+		info.RestrictName = restrictValues[info.Restrict]
+		info.Screened = secondByte & 0x03
+		info.ScreenedName = screenedValues[info.Screened]
+	}
 
-		if isCalling {
-			// For calling number
-			info.NI = (secondByte >> 7) & 0x01
-			info.NIName = niValues[info.NI]
-			info.NPI = (secondByte >> 4) & 0x07
-			info.NPIName = npiValues[info.NPI]
-			info.Restrict = (secondByte >> 2) & 0x03
-			info.RestrictName = restrictValues[info.Restrict]
-			info.Screened = secondByte & 0x03
-			info.ScreenedName = screenedValues[info.Screened]
-		} else {
-			// For called number
-			info.INN = (secondByte >> 7) & 0x01
-			info.INNName = innValues[info.INN]
-			info.NPI = (secondByte >> 4) & 0x07
-			info.NPIName = npiValues[info.NPI]
-		}
+	// Extract address digits
+	if len(data) > 2 {
+		info.Number = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
+	}
+
+	return info
+}
+
+func parseNumberInfoCalled(data []byte) *NumberInfoCalled {
+	if len(data) < 1 {
+		return nil
+	}
+
+	info := &NumberInfoCalled{}
+
+	// Parse first byte
+	firstByte := data[0]
+	info.TON = firstByte & 0x7F
+	info.TONName = natureOfAddressValues[info.TON]
+
+	if len(data) > 1 {
+		secondByte := data[1]
+		// For called number
+		info.INN = (secondByte >> 7) & 0x01
+		info.INNName = innValues[info.INN]
+		info.NPI = (secondByte >> 4) & 0x07
+		info.NPIName = npiValues[info.NPI]
+	}
+
+	// Extract address digits
+	if len(data) > 2 {
+		info.Number = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
+	}
+
+	return info
+}
+
+func parseNumberInfoCharge(data []byte) *NumberInfoCharge {
+	if len(data) < 2 {
+		return nil
+	}
+
+	info := &NumberInfoCharge{}
+
+	// Parse first byte
+	firstByte := data[0]
+	info.TON = firstByte & 0x7F
+	info.TONName = natureOfAddressValues[info.TON]
+
+	if len(data) > 1 {
+		secondByte := data[1]
+		// For charged number
+		info.NPI = (secondByte >> 4) & 0x07
+		info.NPIName = npiValues[info.NPI]
 	}
 
 	// Extract address digits
