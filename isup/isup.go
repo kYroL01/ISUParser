@@ -10,14 +10,14 @@ import (
 type IAMParameters struct {
 	NatureOfConnection *NatureOfConnection `json:"nature_of_connection,omitempty"`
 	ForwardCall        *ForwardCall        `json:"forward_call,omitempty"`
-	CallingParty       *CallingParty       `json:"calling_party,omitempty"`
 	TransmissionMedium *TransmissionMedium `json:"transmission_medium,omitempty"`
-	CalledNumber       *NumberInfo         `json:"called_number,omitempty"`
+	CallingParty       *CallingParty       `json:"calling_party,omitempty"`
 	CallingNumber      *NumberInfo         `json:"calling_number,omitempty"`
+	CalledNumber       *NumberInfo         `json:"called_number,omitempty"`
+	ChargeNumber       *NumberInfo         `json:"charge_number,omitempty"`
 	HopCounter         *uint8              `json:"hop_counter,omitempty"`
 	GenericNumber      *NumberInfo         `json:"generic_number,omitempty"`
 	Jurisdiction       *string             `json:"jurisdiction,omitempty"`
-	ChargeNumber       *NumberInfo         `json:"charge_number,omitempty"`
 	// Add other fields as needed
 }
 
@@ -59,11 +59,6 @@ type CallingParty struct {
 	Name string `json:"name"`
 }
 
-type TransmissionMedium struct {
-	Num  uint8  `json:"num"`
-	Name string `json:"name"`
-}
-
 type NumberInfo struct {
 	INN          uint8  `json:"inn,omitempty"`
 	INNName      string `json:"inn_name,omitempty"`
@@ -78,6 +73,11 @@ type NumberInfo struct {
 	Screened     uint8  `json:"screened,omitempty"`
 	ScreenedName string `json:"screened_name,omitempty"`
 	Number       string `json:"num,omitempty"`
+}
+
+type TransmissionMedium struct {
+	Num  uint8  `json:"num"`
+	Name string `json:"name"`
 }
 
 type UserServiceInformation struct {
@@ -129,8 +129,8 @@ type ISUPMessage struct {
 	MessageType uint8          `json:"message_type"`
 	MessageName string         `json:"message_name,omitempty"`
 	CIC         uint16         `json:"cic"`
-	Data        []byte         `json:"data,omitempty"` // ISUP message body
-	IAM         *IAMParameters `json:"iam,omitempty"`  // IAM-specific parameters
+	Data        []byte         `json:"-"`
+	IAM         *IAMParameters `json:"iam,omitempty"` // IAM-specific parameters
 }
 
 // Parse ISUP ITU message
@@ -277,6 +277,7 @@ const (
 	ISUPMessageTypeAPT   = 65 // Application Transport
 	ISUPMessageTypePRI   = 66 // Pre-release Information
 	ISUPMessageTypeSAN   = 67 // Subsequent Directory Number
+
 )
 
 // ISUPMessageTypeNames maps ISUP message type codes to human-readable names
@@ -316,17 +317,17 @@ var ISUPMessageTypeNames = map[uint8]string{
 	ISUPMessageTypeLPA:  "LPA (Loopback Acknowledgment)",
 	ISUPMessageTypeCSVQ: "CSVQ (CUG Selection and Validation Request)",
 	ISUPMessageTypeCSVR: "CSVR (CUG Selection and Validation Response)",
-	ISUPMessageTypeDRS:  "DRS (Delayed Release)", 
-	ISUPMessageTypePAM:  "PAM (Pass Along)",      
+	ISUPMessageTypeDRS:  "DRS (Delayed Release)",
+	ISUPMessageTypePAM:  "PAM (Pass Along)",
 	ISUPMessageTypeGRA:  "GRA (Circuit Group Reset Acknowledgment)",
-	ISUPMessageTypeCQM:  "CQM (Circuit Group Query)", 
+	ISUPMessageTypeCQM:  "CQM (Circuit Group Query)",
 	ISUPMessageTypeCQR:  "CQR (Circuit Group Query Request)",
 	ISUPMessageTypeCPG:  "CPG (Call Progress)",
 	ISUPMessageTypeUSR:  "USR (User-to-User Information)",
 	ISUPMessageTypeUCIC: "UCIC (Unequipped Circuit Identification Code)",
 	ISUPMessageTypeCFN:  "CFN (Confusion)",
 	ISUPMessageTypeOLM:  "OLM (Overload)",
-	ISUPMessageTypeCRG:  "CRG (Charge information)", 
+	ISUPMessageTypeCRG:  "CRG (Charge information)",
 	ISUPMessageTypeNRM:  "NRM (Network Resource Management)",
 	ISUPMessageTypeFAC:  "FAC (Facility)",
 	ISUPMessageTypeUPT:  "UPT (User Part Test)",

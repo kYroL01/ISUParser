@@ -104,6 +104,7 @@ const (
 	ISUPGenericNumber                       = 192 // Generic number spec: 3.26
 	ISUPGenericDigits                       = 193 // Generic digits spec: 3.24
 	ISUPJurisdiction                        = 196 // Jurisdiction
+	ISUPChargeNumber                        = 235 // Charge number spec: 3.1
 )
 
 // Parameter name mapping for debugging/logging
