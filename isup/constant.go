@@ -222,53 +222,53 @@ func GetParameterName(paramType uint8) string {
 
 // Nature of Connection Indicators
 var satelliteIndicators = map[uint8]string{
-	0: "No Satellite circuit in connection",
-	1: "One Satellite circuit in connection",
-	2: "Two Satellite circuits in connection",
-	3: "Spare",
+	0x0: "No Satellite circuit in connection",
+	0x1: "One Satellite circuit in connection",
+	0x2: "Two Satellite circuits in connection",
+	0x3: "Spare",
 }
 
 var continuityCheckIndicators = map[uint8]string{
-	0: "Continuity check not required",
-	1: "Continuity check required on this circuit",
-	2: "Continuity check performed on a previous circuit",
-	3: "Spare",
+	0x0: "Continuity check not required",
+	0x1: "Continuity check required on this circuit",
+	0x2: "Continuity check performed on a previous circuit",
+	0x3: "Spare",
 }
 
 var echoControlIndicators = map[uint8]string{
-	0: "Echo control device not included",
-	1: "Echo control device included",
+	0x0: "Echo control device not included",
+	0x1: "Echo control device included",
 }
 
 // Forward Call Indicators
 var nationalInternationalIndicators = map[uint8]string{
-	0: "Call to be treated as national call",
-	1: "Call to be treated as international call",
+	0x0: "Call to be treated as national call",
+	0x1: "Call to be treated as international call",
 }
 
 var endToEndMethodIndicators = map[uint8]string{
-	0: "No End-to-end method available (only link-by-link method available)",
-	1: "Pass-along method available",
-	2: "SCCP method available",
-	3: "Pass-along and SCCP methods available",
+	0x0: "No End-to-end method available (only link-by-link method available)",
+	0x1: "Pass-along method available",
+	0x2: "SCCP method available",
+	0x3: "Pass-along and SCCP methods available",
 }
 
 // Add these missing mappings to constants.go
 
 // ISDN Preference Indicators
 var isdnPreferenceIndicators = map[uint8]string{
-	0: "ISDN user part preferred all the way",
-	1: "ISDN user part not required all the way",
-	2: "ISDN user part required all the way",
-	3: "spare",
+	0x0: "ISDN user part preferred all the way",
+	0x1: "ISDN user part not required all the way",
+	0x2: "ISDN user part required all the way",
+	0x3: "spare",
 }
 
 // SCCP Method Indicators
 var sccpMethodIndicators = map[uint8]string{
-	0: "no indication",
-	1: "connectionless method available (national use)",
-	2: "connection oriented method available",
-	3: "connectionless and connection oriented methods available (national use)",
+	0x0: "no indication",
+	0x1: "connectionless method available (national use)",
+	0x2: "connection oriented method available",
+	0x3: "connectionless and connection oriented methods available (national use)",
 }
 
 // Calling Category Values

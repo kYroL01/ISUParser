@@ -1,81 +1,122 @@
-// In isup/iam_parser.go
 package isup
 
 import (
 	"fmt"
 )
 
-// Parse IAM message parameters
-func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
+// ParseIAM decodes an IAM packet according to ITU-T Q.763
+func ParseIAM(data []byte) (*IAMParameters, error) {
+	Len := len(data)
+	if Len < 7 {
+		return nil, fmt.Errorf("IAM too short")
+	}
+	offset := 0
+	iam := &IAMParameters{}
 
-	IAMSize := len(data)
+	/**
+	** Fixed mandatory parameters
+	**/
+	if offset+1 > Len {
+		return nil, fmt.Errorf("missing Nature of Connection Indicators")
+	}
+	// Nature of Connection Indicators
+	iam.NatureOfConnection = parseNatureOfConnection(data[offset])
+	offset++
 
-	if IAMSize < 3 {
-		return nil, fmt.Errorf("IAM message too short")
+	if offset+2 > Len {
+		return nil, fmt.Errorf("missing Forward Call Indicators")
+	}
+	// Forward Call
+	iam.ForwardCall = parseForwardCall(data[offset : offset+2])
+	offset += 2
+
+	if offset+1 > Len {
+		return nil, fmt.Errorf("missing Calling Party Category")
+	}
+	// Calling Party Category
+	iam.CallingPartyCategory = parseCallingPartyCat(data[offset])
+	offset++
+
+	// Pointer table start
+	if Len < offset+3 {
+		return nil, fmt.Errorf("IAM missing pointer table")
+	}
+	ptrStart := offset
+	ptrUSI := int(data[ptrStart+0])      // pointer index 0
+	ptrCalled := int(data[ptrStart+1])   // pointer index 1
+	ptrOptional := int(data[ptrStart+2]) // pointer index 2
+
+	/**
+	** Variable mandatory parameters
+	**/
+
+	// User Service Information
+	if ptrUSI != 0 {
+		pPos := ptrStart + 0
+		base := pPos + ptrUSI
+		if base+1 <= Len {
+			l := int(data[base])
+			if base+1+l <= Len {
+				iam.UserServiceInformation = parseUserServiceInformation(data[base+1 : base+1+l])
+			}
+		}
 	}
 
-	iam := &IAMParameters{}
-	offset := 0
-
-	// Parse parameters sequentially
-	for offset < IAMSize {
-		paramType := data[offset]
-		offset++
-
-		if paramType == ISUPEndOfOptionalParameters {
-			break
+	// Called Party Number
+	if ptrCalled != 0 {
+		pPos := ptrStart + 1
+		base := pPos + ptrCalled
+		if base+1 <= Len {
+			l := int(data[base])
+			if base+1+l <= Len {
+				iam.CalledPartyNumber = parseNumberInfoCalled(data[base+1 : base+1+l])
+			}
 		}
+	}
 
-		if offset >= IAMSize {
-			break
-		}
+	/**
+	** Optional parameters
+	**/
+	if ptrOptional != 0 {
+		pPos := ptrStart + 2
+		optStart := pPos + ptrOptional
+		offset = optStart
+		for offset < Len {
+			if offset >= Len {
+				break
+			}
+			t := data[offset]
+			offset++
+			if t == ISUPEndOfOptionalParameters {
+				break
+			}
+			if offset >= Len {
+				break
+			}
+			l := int(data[offset])
+			offset++
+			if offset+l > Len {
+				break
+			}
+			val := data[offset : offset+l]
+			offset += l
 
-		paramLength := int(data[offset])
-		offset++
-
-		if offset+paramLength > IAMSize {
-			break
-		}
-
-		paramData := data[offset : offset+paramLength]
-		offset += paramLength
-
-		// Parse specific parameters
-		switch paramType {
-		case ISUPNatureOfConnectionIndicators:
-			if len(paramData) >= 1 {
-				iam.NatureOfConnection = parseNatureOfConnection(paramData[0])
+			switch t {
+			case ISUPCallingPartyNumber:
+				iam.CallingPartyNumber = parseNumberInfoCalling(val)
+			case ISUPChargeNumber:
+				iam.ChargeNumber = parseNumberInfoCharge(val)
+			case ISUPHopCounter:
+				if len(val) >= 1 {
+					hop := val[0]
+					iam.HopCounter = &hop
+				}
+			case ISUPGenericNumber:
+				iam.GenericNumber = parseNumberInfoGeneric(val)
+			case ISUPJurisdiction:
+				j := parseJurisdictionDigits(val)
+				iam.Jurisdiction = &j
 			}
-		case ISUPForwardCallIndicators:
-			if len(paramData) >= 2 {
-				iam.ForwardCall = parseForwardCall(paramData)
-			}
-		case ISUPCallingPartysCategory:
-			if len(paramData) >= 1 {
-				iam.CallingPartyCategory = parseCallingPartyCat(paramData[0])
-			}
-		case ISUPTransmissionMediumRequirement:
-			if len(paramData) >= 1 {
-				iam.TransmissionMedium = parseTransmissionMedium(paramData[0])
-			}
-		case ISUPUserServiceInformation:
-			iam.UserServiceInformation = parseUserServiceInformation(paramData)
-		case ISUPCalledPartyNumber:
-			iam.CalledNumber = parseNumberInfoCalled(paramData)
-		case ISUPCallingPartyNumber:
-			iam.CallingNumber = parseNumberInfoCalling(paramData)
-		case ISUPHopCounter:
-			if len(paramData) >= 1 {
-				hopCounter := paramData[0]
-				iam.HopCounter = &hopCounter
-			}
-		case ISUPGenericNumber:
-			iam.GenericNumber = parseNumberInfoGeneric(paramData)
-		case ISUPJurisdiction:
-			digits := parseJurisdictionDigits(paramData)
-			iam.Jurisdiction = &digits
-		case ISUPChargeNumber:
-			iam.ChargeNumber = parseNumberInfoCharge(paramData)
 		}
 	}
 
@@ -117,8 +158,8 @@ func parseForwardCall(data []byte) *ForwardCall {
 		InterworkingName:              interworkingIndicators[(byte1>>3)&0x01],
 		EndToEndInformation:           (byte1 >> 4) & 0x01,
 		EndToEndInformationName:       endToEndInformationIndicators[(byte1>>4)&0x01],
-		ISUP:                          (byte1 >> 5) & 0x01,
-		ISUPName:                      isdnUserPartIndicators[(byte1>>5)&0x01],
+		ISUPIndicator:                 (byte1 >> 5) & 0x01,
+		ISUPIndicatorName:             isdnUserPartIndicators[(byte1>>5)&0x01],
 		ISUPPreference:                (byte1 >> 6) & 0x03,
 		ISUPPreferenceName:            isdnPreferenceIndicators[(byte1>>6)&0x03],
 		ISDNAccess:                    byte2 & 0x01,
@@ -297,9 +338,10 @@ func parseNumberInfoGeneric(data []byte) *NumberInfoGeneric {
 		info.ScreenedName = screenedValues[info.Screened]
 	}
 
-	// Extract address digits
-	if Len > 2 {
-		info.Number = decodeBCDAddress(data[3:], (data[0]>>7)&0x01 == 1)
+	// Address digits start at index 3
+	if Len > 3 {
+		odd := (data[1] & 0x80) != 0 // O/E bit is bit 8 of octet 2
+		info.Number = decodeBCDAddress(data[3:], odd)
 	}
 
 	return info

@@ -4,26 +4,25 @@ import (
 	"fmt"
 )
 
-// In isup/isup.go
-
-// Updated IAMParameters struct to match C output
+// IAMParameters struct
 type IAMParameters struct {
 	// Mandatory parameters
-	NatureOfConnection     *NatureOfConnection     `json:"nature_of_connection,omitempty"`
-	ForwardCall            *ForwardCall            `json:"forward_call,omitempty"`
-	CallingPartyCategory   *CallingPartyCat        `json:"calling_party_category,omitempty"`
+	NatureOfConnection   *NatureOfConnection `json:"nature_of_connection"`
+	ForwardCall          *ForwardCall        `json:"forward_call"`
+	CallingPartyCategory *CallingPartyCat    `json:"calling_party_category"`
+	CalledPartyNumber    *NumberInfoCalled   `json:"called_party_number"`
+	// Mandatory but mutually exclusive
 	TransmissionMedium     *TransmissionMedium     `json:"transmission_medium,omitempty"`
 	UserServiceInformation *UserServiceInformation `json:"user_service_information,omitempty"`
 	// Optional parameters
-	CallingNumber          *NumberInfoCalling      `json:"calling_number,omitempty"`
-	CalledNumber           *NumberInfoCalled       `json:"called_number,omitempty"`
-	ChargeNumber           *NumberInfoCharge       `json:"charge_number,omitempty"`
-	HopCounter             *uint8                  `json:"hop_counter,omitempty"`
-	GenericNumber          *NumberInfoGeneric      `json:"generic_number,omitempty"`
-	Jurisdiction           *string                 `json:"jurisdiction,omitempty"`
+	CallingPartyNumber *NumberInfoCalling `json:"calling_party_number,omitempty"`
+	ChargeNumber       *NumberInfoCharge  `json:"charge_number,omitempty"`
+	HopCounter         *uint8             `json:"hop_counter,omitempty"`
+	GenericNumber      *NumberInfoGeneric `json:"generic_number,omitempty"`
+	Jurisdiction       *string            `json:"jurisdiction,omitempty"`
 }
 
-// Updated parameter structures to match C JSON format
+// Parameter structures
 type NatureOfConnection struct {
 	Satellite           uint8  `json:"satellite"`
 	SatelliteName       string `json:"satellite_name"`
@@ -42,8 +41,8 @@ type ForwardCall struct {
 	InterworkingName              string `json:"interworking_name"`
 	EndToEndInformation           uint8  `json:"end_to_end_information"`
 	EndToEndInformationName       string `json:"end_to_end_information_name"`
-	ISUP                          uint8  `json:"isup"`
-	ISUPName                      string `json:"isup_name"`
+	ISUPIndicator                 uint8  `json:"isup"`
+	ISUPIndicatorName             string `json:"isup_name"`
 	ISUPPreference                uint8  `json:"isup_preference"`
 	ISUPPreferenceName            string `json:"isup_preference_name"`
 	ISDNAccess                    uint8  `json:"isdn_access"`
@@ -199,7 +198,7 @@ func ParseISUP_ITU(data []byte) (*ISUPMessage, error) {
 
 	// Parse IAM-specific parameters if message type is IAM
 	if ISUPmsg.MessageType == ISUPMessageTypeIAM {
-		iamParams, err := ParseIAMParameters(ISUPmsg.Data, 0) // Assuming format 0 for ITU
+		iamParams, err := ParseIAM(ISUPmsg.Data)
 		if err == nil {
 			ISUPmsg.IAM = iamParams
 		}
@@ -240,7 +239,7 @@ func ParseISUP_ANSI(data []byte) (*ISUPMessage, error) {
 
 	// Parse IAM-specific parameters if message type is IAM
 	if ISUPmsg.MessageType == ISUPMessageTypeIAM {
-		iamParams, err := ParseIAMParameters(ISUPmsg.Data, 1) // Assuming format 1 for ANSI
+		iamParams, err := ParseIAM(ISUPmsg.Data)
 		if err == nil {
 			ISUPmsg.IAM = iamParams
 		}
