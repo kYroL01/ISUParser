@@ -8,18 +8,19 @@ import (
 
 // Updated IAMParameters struct to match C output
 type IAMParameters struct {
+	// Mandatory parameters
 	NatureOfConnection     *NatureOfConnection     `json:"nature_of_connection,omitempty"`
 	ForwardCall            *ForwardCall            `json:"forward_call,omitempty"`
+	CallingPartyCategory   *CallingPartyCat        `json:"calling_party_category,omitempty"`
 	TransmissionMedium     *TransmissionMedium     `json:"transmission_medium,omitempty"`
 	UserServiceInformation *UserServiceInformation `json:"user_service_information,omitempty"`
-	CallingPartyCategory   *CallingPartyCat        `json:"calling_party_category,omitempty"`
+	// Optional parameters
 	CallingNumber          *NumberInfoCalling      `json:"calling_number,omitempty"`
 	CalledNumber           *NumberInfoCalled       `json:"called_number,omitempty"`
 	ChargeNumber           *NumberInfoCharge       `json:"charge_number,omitempty"`
 	HopCounter             *uint8                  `json:"hop_counter,omitempty"`
-	GenericNumber          *NumberInfoCalling      `json:"generic_number,omitempty"`
+	GenericNumber          *NumberInfoGeneric      `json:"generic_number,omitempty"`
 	Jurisdiction           *string                 `json:"jurisdiction,omitempty"`
-	// Add other fields as needed
 }
 
 // Updated parameter structures to match C JSON format
@@ -90,6 +91,22 @@ type NumberInfoCharge struct {
 	NPI     uint8  `json:"npi"`
 	NPIName string `json:"npi_name"`
 	Number  string `json:"num"`
+}
+
+type NumberInfoGeneric struct {
+	NQI          uint8  `json:"nqi"`
+	NQIName      string `json:"nqi_name"`
+	TON          uint8  `json:"ton"`
+	TONName      string `json:"ton_name"`
+	NI           uint8  `json:"ni"`
+	NIName       string `json:"ni_name"`
+	NPI          uint8  `json:"npi"`
+	NPIName      string `json:"npi_name"`
+	Restrict     uint8  `json:"restrict"`
+	RestrictName string `json:"restrict_name"`
+	Screened     uint8  `json:"screened"`
+	ScreenedName string `json:"screened_name"`
+	Number       string `json:"num"`
 }
 
 type TransmissionMedium struct {

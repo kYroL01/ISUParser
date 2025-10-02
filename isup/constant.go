@@ -279,7 +279,7 @@ var callingCategoryValues = map[uint8]string{
 	0x03: "operator, language German",
 	0x04: "operator, language Russian",
 	0x05: "operator, language Spanish",
-	0x09: "reserved (see ITU-T Recommendation Q.104) (Note) (national use)",
+	0x09: "reserved (see ITU-T Recommendation Q.104) (national use)",
 	0x0A: "ordinary calling subscriber",
 	0x0B: "calling subscriber with priority",
 	0x0C: "data call (voice band data)",
@@ -414,16 +414,35 @@ var niValues = map[uint8]string{
 var restrictValues = map[uint8]string{
 	0x00: "presentation allowed",
 	0x01: "presentation restricted",
-	0x02: "address not available (Note 1) (national use)",
+	0x02: "address not available (national use)",
 	0x03: "reserved for restriction by the network",
 }
 
 // Screening Indicator Values
 var screenedValues = map[uint8]string{
-	0x00: "reserved (Note 2)",
+	0x00: "user provided, not verified",
 	0x01: "user provided, verified and passed",
-	0x02: "reserved (Note 2)",
+	0x02: "user provided, verified and failed",
 	0x03: "network provided",
+}
+
+// Number Qualifier Indicators
+var nqiValues = map[byte]string{
+	0x00: "reserved (dialled digits) (national use)",
+	0x01: "additional called number (national use)",
+	0x02: "reserved (supplemental user provided calling number - failed network screening) (national use)",
+	0x03: "reserved (supplemental user provided calling number - not screened) (national use)",
+	0x04: "reserved (redirecting terminating number) (national use)",
+	0x05: "additional connected number",
+	0x06: "additional calling party number",
+	0x07: "reserved for additional original called number",
+	0x08: "reserved for additional redirecting number",
+	0x09: "reserved for additional redirection number",
+	0x0A: "reserved (used in 1992 version)",
+	0x0B: "reserved",
+	0x80: "spare",
+	0xC0: "reserved for national use",
+	0xff: "reserved for expansion",
 }
 
 // Interworking Indicators

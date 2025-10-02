@@ -61,16 +61,16 @@ func ParseIAMParameters(data []byte, format int) (*IAMParameters, error) {
 		case ISUPUserServiceInformation:
 			iam.UserServiceInformation = parseUserServiceInformation(paramData)
 		case ISUPCalledPartyNumber:
-			iam.CalledNumber = parseNumberInfoCalled(paramData) // false for called number
+			iam.CalledNumber = parseNumberInfoCalled(paramData)
 		case ISUPCallingPartyNumber:
-			iam.CallingNumber = parseNumberInfoCalling(paramData) // true for calling number
+			iam.CallingNumber = parseNumberInfoCalling(paramData)
 		case ISUPHopCounter:
 			if len(paramData) >= 1 {
 				hopCounter := paramData[0]
 				iam.HopCounter = &hopCounter
 			}
 		case ISUPGenericNumber:
-			iam.GenericNumber = parseNumberInfoCalling(paramData)
+			iam.GenericNumber = parseNumberInfoGeneric(paramData)
 		case ISUPJurisdiction:
 			digits := parseJurisdictionDigits(paramData)
 			iam.Jurisdiction = &digits
@@ -98,7 +98,10 @@ func parseNatureOfConnection(value uint8) *NatureOfConnection {
 }
 
 func parseForwardCall(data []byte) *ForwardCall {
-	if len(data) < 2 {
+
+	Len := len(data)
+
+	if Len < 2 {
 		return nil
 	}
 
@@ -182,32 +185,31 @@ func parseUserServiceInformation(data []byte) *UserServiceInformation {
 }
 
 func parseNumberInfoCalling(data []byte) *NumberInfoCalling {
-	if len(data) < 1 {
+
+	Len := len(data)
+
+	if Len < 1 {
 		return nil
 	}
 
 	info := &NumberInfoCalling{}
 
-	// Parse first byte
-	firstByte := data[0]
-	info.TON = firstByte & 0x7F
+	info.TON = data[0] & 0x7F
 	info.TONName = natureOfAddressValues[info.TON]
 
-	if len(data) > 1 {
-		secondByte := data[1]
-		// For calling number
-		info.NI = (secondByte >> 7) & 0x01
+	if Len > 1 {
+		info.NI = (data[1] >> 7) & 0x01
 		info.NIName = niValues[info.NI]
-		info.NPI = (secondByte >> 4) & 0x07
+		info.NPI = (data[1] >> 4) & 0x07
 		info.NPIName = npiValues[info.NPI]
-		info.Restrict = (secondByte >> 2) & 0x03
+		info.Restrict = (data[1] >> 2) & 0x03
 		info.RestrictName = restrictValues[info.Restrict]
-		info.Screened = secondByte & 0x03
+		info.Screened = data[1] & 0x03
 		info.ScreenedName = screenedValues[info.Screened]
 	}
 
 	// Extract address digits
-	if len(data) > 2 {
+	if Len > 2 {
 		info.Number = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
 	}
 
@@ -215,28 +217,27 @@ func parseNumberInfoCalling(data []byte) *NumberInfoCalling {
 }
 
 func parseNumberInfoCalled(data []byte) *NumberInfoCalled {
-	if len(data) < 1 {
+
+	Len := len(data)
+
+	if Len < 1 {
 		return nil
 	}
 
 	info := &NumberInfoCalled{}
 
-	// Parse first byte
-	firstByte := data[0]
-	info.TON = firstByte & 0x7F
+	info.TON = data[0] & 0x7F
 	info.TONName = natureOfAddressValues[info.TON]
 
-	if len(data) > 1 {
-		secondByte := data[1]
-		// For called number
-		info.INN = (secondByte >> 7) & 0x01
+	if Len > 1 {
+		info.INN = (data[1] >> 7) & 0x01
 		info.INNName = innValues[info.INN]
-		info.NPI = (secondByte >> 4) & 0x07
+		info.NPI = (data[1] >> 4) & 0x07
 		info.NPIName = npiValues[info.NPI]
 	}
 
 	// Extract address digits
-	if len(data) > 2 {
+	if Len > 2 {
 		info.Number = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
 	}
 
@@ -244,27 +245,61 @@ func parseNumberInfoCalled(data []byte) *NumberInfoCalled {
 }
 
 func parseNumberInfoCharge(data []byte) *NumberInfoCharge {
-	if len(data) < 2 {
+
+	Len := len(data)
+
+	if Len < 2 {
 		return nil
 	}
 
 	info := &NumberInfoCharge{}
 
-	// Parse first byte
-	firstByte := data[0]
-	info.TON = firstByte & 0x7F
+	info.TON = data[0] & 0x7F
 	info.TONName = natureOfAddressValues[info.TON]
 
-	if len(data) > 1 {
-		secondByte := data[1]
-		// For charged number
-		info.NPI = (secondByte >> 4) & 0x07
+	if Len > 1 {
+		info.NPI = (data[1] >> 4) & 0x07
 		info.NPIName = npiValues[info.NPI]
 	}
 
 	// Extract address digits
-	if len(data) > 2 {
+	if Len > 2 {
 		info.Number = decodeBCDAddress(data[2:], (data[0]>>7)&0x01 == 1)
+	}
+
+	return info
+}
+
+func parseNumberInfoGeneric(data []byte) *NumberInfoGeneric {
+
+	Len := len(data)
+
+	if Len < 2 {
+		return nil
+	}
+
+	info := &NumberInfoGeneric{}
+
+	info.NQI = data[0]
+	info.NQIName = nqiValues[info.NQI]
+
+	if Len > 1 {
+
+		info.TON = data[1] & 0x7F
+		info.TONName = natureOfAddressValues[info.TON]
+		info.NI = (data[2] >> 7) & 0x01
+		info.NIName = niValues[info.NI]
+		info.NPI = (data[2] >> 4) & 0x07
+		info.NPIName = npiValues[info.NPI]
+		info.Restrict = (data[2] >> 2) & 0x03
+		info.RestrictName = restrictValues[info.Restrict]
+		info.Screened = data[2] & 0x03
+		info.ScreenedName = screenedValues[info.Screened]
+	}
+
+	// Extract address digits
+	if Len > 2 {
+		info.Number = decodeBCDAddress(data[3:], (data[0]>>7)&0x01 == 1)
 	}
 
 	return info
@@ -277,7 +312,7 @@ func parseJurisdictionDigits(data []byte) string {
 // Helper function to decode BCD address digits
 func decodeBCDAddress(data []byte, odd bool) string {
 	var digits string
-	for i := 0; i < len(data); i++ {
+	for i := range data {
 		byteVal := data[i]
 		// Low nibble
 		lowDigit := byteVal & 0x0F
