@@ -48,18 +48,14 @@ type ParsedMessage struct {
 func extractSCTPPayload(packet gopacket.Packet) ([]*sctp.DataChunk, uint32, error) {
 	sctpLayer := packet.Layer(layers.LayerTypeSCTP)
 
-	// If we have a proper SCTP layer, try the complete packet parsing
+	// Complete parsing for SCTP (non-fragmented packets)
 	if sctpLayer != nil {
 		sctpHeader := sctpLayer.LayerContents()
 		sctpPayload := sctpLayer.LayerPayload()
 
-		//fmt.Printf("Complete SCTP packet - Header: %d bytes, Payload: %d bytes\n", len(sctpHeader), len(sctpPayload))
-
 		if len(sctpHeader) >= 12 {
 			dataChunks, totalLength, err := sctp.ParseCompletePacket(sctpHeader, sctpPayload)
 			if err == nil {
-				//fmt.Printf("Found %d DATA chunks in SCTP packet\n", len(dataChunks))
-
 				// Convert []sctp.DataChunk to []*sctp.DataChunk
 				ptrChunks := make([]*sctp.DataChunk, len(dataChunks))
 				for i := range dataChunks {
@@ -71,15 +67,12 @@ func extractSCTPPayload(packet gopacket.Packet) ([]*sctp.DataChunk, uint32, erro
 		}
 	}
 
-	// Chunks-only parsing (for fragmented packets)
+	// Chunks-only parsing for SCTP (fragmented packets)
 	if transLayer := packet.TransportLayer(); transLayer != nil {
 		rawPayload := transLayer.LayerPayload()
 		if len(rawPayload) > 0 {
-			//fmt.Printf("Trying chunks-only parsing on %d bytes of transport payload\n", len(rawPayload))
 			dataChunks, totalLength, err := sctp.ParseChunksOnly(rawPayload)
 			if err == nil {
-				//fmt.Printf("Found %d DATA chunks in chunks-only payload\n", len(dataChunks))
-
 				// Convert []sctp.DataChunk to []*sctp.DataChunk
 				ptrChunks := make([]*sctp.DataChunk, len(dataChunks))
 				for i := range dataChunks {
@@ -102,7 +95,7 @@ func detectProtocol(ppid uint32, payload []byte) string {
 
 	switch ppid {
 	case 5: // M2PA PPID
-		// M2PA: version = 1, message class often = 11 (Transfer) or 1 (Management)
+		// M2PA: version = 1, message class = 11 (Transfer) or 1 (Management)
 		if payload[0] == 1 && payload[1] == 0 && (payload[2] == 11 || payload[2] == 1) {
 			return ProtocolM2PA
 		}
@@ -116,9 +109,14 @@ func detectProtocol(ppid uint32, payload []byte) string {
 	return ProtocolUnknown
 }
 
+const version = "1.0.1"
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s <pcap_file>\n", os.Args[0])
+
+	fmt.Printf("\n>>--- WELCOME to ISUParser %s --->\n", version)
+
+	if len(os.Args) < 3 {
+		fmt.Printf("\nUsage: %s <pcap_file> <isup type (itu or ansi)>\n", os.Args[0])
 		return
 	}
 
@@ -173,7 +171,7 @@ func main() {
 			dstIP = netLayer.NetworkFlow().Dst().String()
 		}
 
-		// Fixed port extraction
+		// Port extraction
 		if transLayer := packet.TransportLayer(); transLayer != nil {
 			srcRaw := transLayer.TransportFlow().Src().Raw()
 			dstRaw := transLayer.TransportFlow().Dst().Raw()
@@ -185,20 +183,15 @@ func main() {
 			}
 		}
 
-		// Extract SCTP payload (handles both complete packets and chunks-only)
+		// Extract SCTP payload
 		dataChunks, sctpLength, err := extractSCTPPayload(packet)
 		if err != nil || sctpLength == 0 || len(dataChunks) == 0 {
 			fmt.Printf("Packet %d: SCTP parsing failed: %v\n", packetCount, err)
 			continue
 		}
 
-		//fmt.Printf("Packet %d: Found %d DATA chunks, total SCTP length: %d\n", packetCount, len(dataChunks), sctpLength)
-
 		// Process each DATA chunk in the packet
 		for chunkIndex, dataChunk := range dataChunks {
-			//fmt.Printf("Processing chunk %d/%d: TSN=%d, PPID=%d, Data=%d bytes\n",
-			//chunkIndex+1, len(dataChunks), dataChunk.TSN, dataChunk.PPID, len(dataChunk.UserData))
-
 			// Detect protocol for this chunk
 			protocol := detectProtocol(dataChunk.PPID, dataChunk.UserData)
 			if protocol == ProtocolUnknown {
@@ -219,14 +212,13 @@ func main() {
 				SCTPPPID:        dataChunk.PPID,
 			}
 
-			// Parse based on protocol type (M2PA/M3UA logic here)
+			// Parse based on protocol type (M2PA/M3UA logic)
 			var jsonBuffer []byte
 			switch protocol {
 			case ProtocolM2PA:
 				m2paCount++
 				if m2paMsg, err := m2pa.ParseM2PA(dataChunk.UserData); err == nil {
 					parsedMessage.M2PA = m2paMsg
-					//fmt.Printf("Chunk %d: Parsed M2PA message, length: %d bytes\n", chunkIndex+1, LenM2PA)
 
 					if m2paMsg.IsUserData() && len(m2paMsg.Data) > 0 {
 
@@ -238,13 +230,7 @@ func main() {
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-
-										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
-											fmt.Printf("IAM Parameters:\n")
-
-										}
-
-										// Create JSON buffer for complete block
+										// Create JSON buffer for the complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
 								}
@@ -257,11 +243,6 @@ func main() {
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-
-										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
-
-										}
-
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -285,12 +266,6 @@ func main() {
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ITU(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-
-										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
-											fmt.Printf("IAM Parameters:\n")
-
-										}
-
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -304,11 +279,6 @@ func main() {
 								if len(mtp3Msg.Data) > 0 {
 									if isupMsg, err := isup.ParseISUP_ANSI(mtp3Msg.Data); err == nil {
 										parsedMessage.ISUP = isupMsg
-										if isupMsg.MessageType == isup.ISUPMessageTypeIAM && isupMsg.IAM != nil {
-											fmt.Printf("IAM Parameters:\n")
-
-										}
-
 										// Create JSON buffer for complete block
 										jsonBuffer = createJSONBuffer(parsedMessage)
 									}
@@ -334,20 +304,18 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nProcessed %d packets, successfully parsed %d SIGTRAN messages\n",
-		packetCount, successfulParses)
-	fmt.Printf("M2PA packets: %d, M3UA packets: %d\n", m2paCount, m3uaCount)
+	fmt.Printf("\nProcessed %d packets, successfully parsed %d SIGTRAN messages\n", packetCount, successfulParses)
+	fmt.Printf("M2PA packets: %d, M3UA packets: %d\n\n", m2paCount, m3uaCount)
 
 	if successfulParses == 0 {
-		fmt.Println("!! No SIGTRAN messages found in the pcap file !!")
-		fmt.Println("!! Verify the packet contains SCTP with M2PA/M3UA payload !!")
+		fmt.Fprintf(os.Stderr, "!! No SIGTRAN messages found in the pcap file !!")
+		fmt.Fprintf(os.Stderr, "!! Verify the packet contains SCTP with M2PA/M3UA payload !!")
 		return
 	}
 
-	// Close the JSON buffer channel and wait for processing to finish
+	// Close the JSON buffer channel and wait for the process to finish
 	close(jsonBufferChan)
-	time.Sleep(1 * time.Second) // Wait a moment for goroutine to finish
-	fmt.Printf("Processing complete. Sent %d JSON buffers\n", successfulParses)
+	time.Sleep(1 * time.Second) // Wait 1 sec for goroutine to finish
 
 	// Print summary
 	fmt.Printf("\nSummary:\n")

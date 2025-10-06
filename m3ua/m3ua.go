@@ -85,15 +85,3 @@ func ParseM3UA(data []byte) (*Message, error) {
 
 	return msg, nil
 }
-
-// GetISUPFormat returns the ISUP format based on Service Indicator
-func (p *ProtocolData) GetISUPFormat() uint8 {
-	switch p.ServiceIndicator {
-	case 5:
-		return 5 // ITU
-	case 2:
-		return 2 // ANSI
-	default:
-		return 0 // Unknown
-	}
-}

@@ -133,18 +133,9 @@ func ParseMTP3_ANSI(data []byte) (*Message, error) {
 		OPC_ANSI:              opcANSI,
 	}
 
-	// Debug output
-	fmt.Printf("ANSI MTP3 Debug:\n")
-	fmt.Printf("  DPC: %d -> Network=%d, Cluster=%d, Member=%d -> %s\n",
-		dpc, dpcANSI.Network, dpcANSI.Cluster, dpcANSI.Member, dpcANSI.String)
-	fmt.Printf("  OPC: %d -> Network=%d, Cluster=%d, Member=%d -> %s\n",
-		opc, opcANSI.Network, opcANSI.Cluster, opcANSI.Member, opcANSI.String)
-	fmt.Printf("  SLS: %d\n", sls)
-
 	// ISUP payload starts at byte 8
 	if Len > 8 {
 		mtp3.Data = data[8:]
-		fmt.Printf("  Payload: %d bytes\n", len(mtp3.Data))
 	}
 
 	return mtp3, nil

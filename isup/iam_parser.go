@@ -123,6 +123,10 @@ func ParseIAM(data []byte) (*IAMParameters, error) {
 	return iam, nil
 }
 
+/**
+** Helper functions to parse individual parameters
+**/
+
 func parseNatureOfConnection(value uint8) *NatureOfConnection {
 	satellite := value & 0x03
 	continuityCheck := (value >> 2) & 0x03

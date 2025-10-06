@@ -22,7 +22,10 @@ type IAMParameters struct {
 	Jurisdiction       *string            `json:"jurisdiction,omitempty"`
 }
 
-// Parameter structures
+/**
+** Parameter structures
+**/
+
 type NatureOfConnection struct {
 	Satellite           uint8  `json:"satellite"`
 	SatelliteName       string `json:"satellite_name"`
@@ -181,16 +184,12 @@ func ParseISUP_ITU(data []byte) (*ISUPMessage, error) {
 	cicHigh := data[1] & 0x0F // CIC High-Order 4 bits (lower 4 bits of byte)
 	cic = (uint16(cicHigh) << 8) | uint16(cicLow)
 
-	fmt.Println("ISUP ITU CIC:", cic)
-
 	// Create ISUP message
 	ISUPmsg := &ISUPMessage{
 		CIC:         cic,
 		MessageType: data[2],
 		MessageName: GetISUPMessageTypeName(data[2]),
 	}
-
-	fmt.Println("ISUP ITU Message Type:", ISUPmsg.MessageType, "(", ISUPmsg.MessageName, ")")
 
 	ISUPmsg.Data = data[3:]
 
@@ -222,16 +221,12 @@ func ParseISUP_ANSI(data []byte) (*ISUPMessage, error) {
 	cicHigh := data[1] & 0x3F // CIC High-Order 6 bits (lower 6 bits of byte)
 	cic = (uint16(cicHigh) << 8) | uint16(cicLow)
 
-	fmt.Println("ISUP ANSI CIC:", cic)
-
 	// Create ISUP message
 	ISUPmsg := &ISUPMessage{
 		CIC:         cic,
 		MessageType: data[2],
 		MessageName: GetISUPMessageTypeName(data[2]),
 	}
-
-	fmt.Println("ISUP ANSI Message Type:", ISUPmsg.MessageType, "(", ISUPmsg.MessageName, ")")
 
 	ISUPmsg.Data = data[3:]
 
