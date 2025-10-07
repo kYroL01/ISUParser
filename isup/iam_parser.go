@@ -170,9 +170,9 @@ func parseForwardCall(data []byte) *ForwardCall {
 		ISDNAccessName:                isdnAccessIndicators[byte2&0x01],
 		SCCPMethod:                    (byte2 >> 1) & 0x03,
 		SCCPMethodName:                sccpMethodIndicators[(byte2>>1)&0x03],
-		PortedNumber:                  (byte2 >> 3) & 0x01,
+		PortedNumber:                  (byte2 >> 4) & 0x01,
 		PortedNumberName:              portedNumberIndicators[(byte2>>3)&0x01],
-		QueryOnRelease:                (byte2 >> 4) & 0x01,
+		QueryOnRelease:                (byte2 >> 5) & 0x01,
 		QueryOnReleaseName:            queryOnReleaseIndicators[(byte2>>4)&0x01],
 	}
 }
