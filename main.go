@@ -147,7 +147,6 @@ func main() {
 	// Create a packet source
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
-	var allMessages []ParsedMessage
 	packetCount := 0
 	successfulParses := 0
 	m2paCount := 0
@@ -294,8 +293,6 @@ func main() {
 				jsonBufferChan <- jsonBuffer
 				successfulParses++
 			}
-
-			allMessages = append(allMessages, parsedMessage)
 			successfulParses++
 		}
 
@@ -304,38 +301,17 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nProcessed %d packets, successfully parsed %d SIGTRAN messages\n", packetCount, successfulParses)
+	// Close the JSON buffer channel and wait for the process to finish
+	close(jsonBufferChan)
+	time.Sleep(1 * time.Second) // Wait 1 sec for goroutine to finish
+
+	fmt.Printf("Processed %d packets, successfully parsed %d SIGTRAN messages\n", packetCount, successfulParses)
 	fmt.Printf("M2PA packets: %d, M3UA packets: %d\n\n", m2paCount, m3uaCount)
 
 	if successfulParses == 0 {
 		fmt.Fprintf(os.Stderr, "!! No SIGTRAN messages found in the pcap file !!")
 		fmt.Fprintf(os.Stderr, "!! Verify the packet contains SCTP with M2PA/M3UA payload !!")
 		return
-	}
-
-	// Close the JSON buffer channel and wait for the process to finish
-	close(jsonBufferChan)
-	time.Sleep(1 * time.Second) // Wait 1 sec for goroutine to finish
-
-	// Print summary
-	fmt.Printf("\nSummary:\n")
-	for i, msg := range allMessages {
-		if i >= 5 {
-			break
-		}
-		fmt.Printf("Packet %d: %s protocol, PPID: %d, TSN: %d\n",
-			msg.PacketNumber, msg.Protocol, msg.SCTPPPID, msg.SCTPTSN)
-		if msg.MTP3 != nil {
-			fmt.Printf("  MTP3: OPC=%d, DPC=%d, SI=%d\n",
-				msg.MTP3.RoutingLabel.OPC, msg.MTP3.RoutingLabel.DPC, msg.MTP3.ServiceIndicator)
-		}
-		if msg.ISUP != nil {
-			fmt.Printf("  ISUP: Type=%d, CIC=%d\n", msg.ISUP.MessageType, msg.ISUP.CIC)
-		}
-		if msg.Error != "" {
-			fmt.Printf("  Error: %s\n", msg.Error)
-		}
-		fmt.Println()
 	}
 }
 
