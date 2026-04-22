@@ -1,5 +1,7 @@
 <img width="532" height="212" alt="ISUParser_logo3" src="https://github.com/user-attachments/assets/a81753d2-28c3-4620-9ba3-2eafd7afa2ff" />
 
+---
+
 [![Go Version](https://img.shields.io/badge/Go-1.24.2-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![Visitors](https://visitor-badge.laobi.icu/badge?page_id=kYroL01.ISUParser)
