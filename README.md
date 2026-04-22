@@ -35,3 +35,11 @@ M2PA packets: 2, M3UA packets: 0
 
 ## Sponsor
 [QXIP B.V.](https://qxip.net) is the main sponsor of this project, supporting open-source innovation
+
+---
+
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-PayPal-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=fci1908%40gmail.com&currency_code=USD)
+
+PayPal: **fci1908@gmail.com**
+
+
