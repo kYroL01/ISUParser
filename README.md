@@ -1,7 +1,13 @@
 <img width="532" height="212" alt="ISUParser_logo3" src="https://github.com/user-attachments/assets/a81753d2-28c3-4620-9ba3-2eafd7afa2ff" />
 
+[![Go Version](https://img.shields.io/badge/Go-1.24.2-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=kYroL01.ISUParser)
 
 #### Standalone application to parse and extract information in JSON format from the ISUP protocol
+
+### ISUP protocol stack
+<img src="./assets/isup-protocol-stack.svg" alt="ISUP protocol stack" width="300" />
 
 ## Compilation
 ```
@@ -41,5 +47,4 @@ M2PA packets: 2, M3UA packets: 0
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-PayPal-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=fci1908%40gmail.com&currency_code=USD)
 
 PayPal: **fci1908@gmail.com**
-
 
